@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ထွန်းတောက်ကြယ် POS - v20 (Full Sync)</title>
+    <title>ထွန်းတောက်ကြယ် POS - v21 (Sync Fix)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --midnight: #020617; --bg-light: #f1f5f9; --border: #e2e8f0; --green: #10b981; --red: #ef4444; --gold: #fbbf24; --blue: #3b82f6; }
@@ -12,7 +12,7 @@
 
         /* Top Bar & Sync Status */
         .top-bar { background: var(--midnight); color: white; height: 60px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; position: fixed; width: 100%; top: 0; z-index: 1000; }
-        #sync-status { font-size: 11px; color: var(--green); }
+        #sync-status { font-size: 11px; color: var(--gold); }
 
         /* Bottom Nav */
         .bottom-nav { position: fixed; bottom: 0; width: 100%; background: white; height: 65px; display: flex; border-top: 1px solid var(--border); z-index: 1000; }
@@ -49,7 +49,7 @@
 
     <header class="top-bar">
         <div class="brand-name"><i class="fas fa-star" style="color:var(--gold)"></i> ထွန်းတောက်ကြယ်</div>
-        <div id="sync-status">Cloud Sync Active</div>
+        <div id="sync-status">Checking...</div>
         <button onclick="uploadToCloud()" style="color:var(--green); background:none; border:none; font-size: 1.2rem;"><i class="fas fa-sync"></i></button>
     </header>
 
@@ -117,43 +117,66 @@
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUgcguSOZ6JYAX1_QQk0s6aMnTI1JPBRYo5BrkujyG9hSpHNroYtj1EppH_8hWI4lswQ/exec';
         
         const STORAGE_P = 'TTK_PROD_V10', STORAGE_S = 'TTK_SALE_V10';
+        // (1) ဖုန်းထဲက စာရင်းကို အရင်ဆုံးဆွဲထုတ်မည် (Primary Source)
         let db_p = JSON.parse(localStorage.getItem(STORAGE_P)) || [];
         let db_s = JSON.parse(localStorage.getItem(STORAGE_S)) || [];
         let currentCart = [], uploadedImg = "", selectedProdId = null;
 
-        // --- CLOUD FUNCTIONS ---
+        // --- CLOUD FUNCTIONS (FIXED) ---
         async function uploadToCloud() {
-            document.getElementById('sync-status').innerText = "Syncing...";
+            document.getElementById('sync-status').innerText = "Saving...";
+            document.getElementById('sync-status').style.color = "var(--gold)";
             try {
+                // text/plain သုံးထား၍ Google Apps Script ပြဿနာမတက်စေရန် ကာကွယ်ထားသည်
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    cache: 'no-cache',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({ products: db_p, sales: db_s })
                 });
-                document.getElementById('sync-status').innerText = "Cloud Synced";
+                document.getElementById('sync-status').innerText = "Online";
+                document.getElementById('sync-status').style.color = "var(--green)";
             } catch (e) { 
-                document.getElementById('sync-status').innerText = "Offline Mode";
+                document.getElementById('sync-status').innerText = "Offline";
+                document.getElementById('sync-status').style.color = "var(--red)";
             }
         }
 
         async function downloadFromCloud() {
-            document.getElementById('sync-status').innerText = "Updating...";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const data = await res.json();
-                if(data.products) { db_p = data.products; localStorage.setItem(STORAGE_P, JSON.stringify(db_p)); }
-                if(data.sales) { db_s = data.sales; localStorage.setItem(STORAGE_S, JSON.stringify(db_s)); }
+                
+                // --- အသက်အရေးကြီးဆုံးအပိုင်း (စာရင်းမပျောက်စေရန်) ---
+                // Google Sheet ထဲမှာ ဘာစာရင်းမှမရှိသေးပေမယ့် ဖုန်းထဲမှာ စာရင်းရှိနေရင် (Overwrite မလုပ်ဘဲ ဖုန်းထဲကဟာကို ပြန်တင်ပေးမည်)
+                if ((!data.products || data.products.length === 0) && db_p.length > 0) {
+                    uploadToCloud();
+                    return;
+                }
+
+                // Google Sheet ထဲမှာ စာရင်းအမှန်တကယ်ရှိနေမှသာ ဖုန်းထဲသို့ ထည့်သွင်းမည်
+                if(data.products && data.products.length > 0) { 
+                    db_p = data.products; 
+                    localStorage.setItem(STORAGE_P, JSON.stringify(db_p)); 
+                }
+                if(data.sales && data.sales.length > 0) { 
+                    db_s = data.sales; 
+                    localStorage.setItem(STORAGE_S, JSON.stringify(db_s)); 
+                }
+                
                 syncAll();
-                document.getElementById('sync-status').innerText = "Cloud Sync Active";
+                document.getElementById('sync-status').innerText = "Online";
+                document.getElementById('sync-status').style.color = "var(--green)";
             } catch (e) {
-                document.getElementById('sync-status').innerText = "Offline Mode";
+                document.getElementById('sync-status').innerText = "Offline";
+                document.getElementById('sync-status').style.color = "var(--red)";
             }
         }
 
         // --- CORE LOGIC ---
         function syncAll() { renderPOS(); renderStock(); renderInv(); }
+        
+        // စာရင်းအသစ်ထည့်တိုင်း ဖုန်းထဲအရင်သိမ်းပြီးမှ Cloud တင်မည်
         function save() { 
             localStorage.setItem(STORAGE_P, JSON.stringify(db_p)); 
             localStorage.setItem(STORAGE_S, JSON.stringify(db_s)); 
@@ -257,7 +280,7 @@
             });
             db_s.push({id:Date.now(), date:new Date().toISOString().split('T')[0], customer:document.getElementById('customer-shop').value, rev:r, prof:pr, items:soldItems});
             save(); if(print) window.print();
-            currentCart=[]; document.getElementById('receipt-modal').style.display='none';
+            currentCart=[]; document.getElementById('receipt-modal').style.display='none'; document.getElementById('customer-shop').value="";
             renderCart(); syncAll();
         }
 
@@ -290,7 +313,8 @@
         function closeReceiptModal() { document.getElementById('receipt-modal').style.display='none'; }
         function resetCart() { if(confirm("စာရင်းဖျက်မှာလား?")) { currentCart=[]; renderCart(); } }
 
-        window.onload = () => { downloadFromCloud(); syncAll(); };
+        // Website စပွင့်တာနဲ့ ဖုန်းထဲကစာရင်းကို အရင်ပြပြီးမှ Cloud ကဟာကို နောက်ကွယ်ကနေ Check လုပ်မည်
+        window.onload = () => { syncAll(); downloadFromCloud(); };
     </script>
 </body>
 </html>
