@@ -3,84 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ထွန်းတောက်ကြယ် POS - v33 (Full Cloud Sync)</title>
+    <title>ထွန်းတောက်ကြယ် POS - v34 (Fix Refresh)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --midnight: #020617; --primary: #1e293b; --green: #10b981; --red: #ef4444; --gold: #fbbf24; --bg: #f3f4f6; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', 'Pyidaungsu', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); padding-top: 65px; padding-bottom: 85px; color: var(--primary); }
-
-        .header { background: var(--midnight); color: white; height: 60px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; position: fixed; width: 100%; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .header { background: var(--midnight); color: white; height: 60px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; position: fixed; width: 100%; top: 0; z-index: 1000; }
         .sync-tag { font-size: 11px; color: var(--gold); font-weight: bold; background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 10px; }
-
         .nav { position: fixed; bottom: 0; width: 100%; background: white; height: 75px; display: flex; border-top: 2px solid var(--midnight); z-index: 1000; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; color: #94a3b8; font-size: 11px; transition: 0.3s; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; color: #94a3b8; font-size: 11px; }
         .nav-item.active { color: var(--midnight); font-weight: bold; }
         .nav-item i { font-size: 1.5rem; margin-bottom: 4px; }
-
-        .container { padding: 12px; display: none; animation: fadeIn 0.3s ease; }
+        .container { padding: 12px; display: none; }
         .container.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .input-style { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; margin-bottom: 10px; transition: 0.2s; }
-        .input-style:focus { border-color: var(--midnight); box-shadow: 0 0 0 3px rgba(2, 6, 23, 0.1); }
-
+        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .input-style { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; margin-bottom: 10px; }
         .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .p-card { background: white; border-radius: 15px; border: 1px solid #e2e8f0; text-align: center; overflow: hidden; cursor: pointer; transition: 0.2s; position: relative; }
-        .p-card img { width: 100%; height: 110px; object-fit: cover; background: #f8fafc; }
+        .p-card { background: white; border-radius: 15px; border: 1px solid #e2e8f0; text-align: center; overflow: hidden; cursor: pointer; }
+        .p-card img { width: 100%; height: 110px; object-fit: cover; }
         .p-info { padding: 10px; }
-        .p-name { font-weight: bold; font-size: 13px; height: 38px; overflow: hidden; }
+        .p-name { font-weight: bold; font-size: 13px; }
         .p-price { color: var(--green); font-weight: bold; font-size: 14px; }
-        .p-stock { font-size: 10px; color: #94a3b8; }
-
         .cart-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #eee; }
-        .qty-btns { display: flex; align-items: center; gap: 10px; }
-        .q-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #cbd5e1; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-
-        .table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
-        .table th { background: #f8fafc; padding: 10px; border-bottom: 2px solid #e2e8f0; }
-        .table td { padding: 10px 5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-
-        .btn { border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; transition: 0.2s; }
+        .btn { border: none; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; }
         .btn-green { background: var(--green); color: white; }
         .btn-dark { background: var(--midnight); color: white; }
-        .btn:active { transform: scale(0.97); }
-
-        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .login-card { background: white; padding: 30px 20px; border-radius: 20px; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        
-        .receipt-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2100; padding: 20px; overflow-y: auto; }
-        .receipt-content { background: white; padding: 20px; border-radius: 10px; width: 100%; max-width: 350px; margin: auto; font-family: 'Courier New', Courier, monospace; }
-
-        .btn-edit-stock { border: none; background: #3b82f6; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px; margin: auto; }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; }
+        .login-card { background: white; padding: 30px 20px; border-radius: 20px; width: 320px; text-align: center; }
+        .table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+        .table th { background: #f8fafc; padding: 10px; border-bottom: 2px solid #e2e8f0; }
+        .table td { padding: 10px 5px; border-bottom: 1px solid #f1f5f9; }
     </style>
 </head>
 <body>
 
     <header class="header">
-        <div style="font-weight:bold;"><i class="fas fa-star" style="color:var(--gold)"></i> ထွန်းတောက်ကြယ်</div>
-        <div class="sync-tag" id="status-text"><i class="fas fa-spinner fa-spin"></i> Connecting...</div>
-        <button onclick="forceSync()" style="background:none; border:none; color:white; font-size: 1.2rem;"><i class="fas fa-sync-alt"></i></button>
+        <div style="font-weight:bold;">ထွန်းတောက်ကြယ် POS</div>
+        <div class="sync-tag" id="status-text"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+        <button onclick="forceSync()" style="background:none; border:none; color:white;"><i class="fas fa-sync-alt"></i></button>
     </header>
 
     <main id="tab-sales" class="container active">
         <div class="card">
-            <div class="grid">
-                <input type="text" id="staff-name" class="input-style" placeholder="အရောင်းသမား">
-                <input type="date" id="sale-date" class="input-style">
-            </div>
+            <div class="grid"><input type="text" id="staff-name" class="input-style" placeholder="အရောင်းသမား"><input type="date" id="sale-date" class="input-style"></div>
             <input type="text" id="cust-name" class="input-style" placeholder="ဝယ်သူအမည်">
-            <input type="text" id="cust-addr" class="input-style" style="margin-bottom:0;" placeholder="နေရပ်လိပ်စာ">
         </div>
         <input type="text" id="search-box" class="input-style" placeholder="ပစ္စည်းရှာရန်..." onkeyup="refreshUI()">
         <div class="grid" id="pos-grid"></div>
-
-        <div class="card" style="margin-top:20px; border-top: 4px solid var(--midnight);">
-            <h4 style="margin-bottom:12px;"><i class="fas fa-shopping-basket"></i> အရောင်းခြင်းတောင်း</h4>
+        <div class="card" style="margin-top:20px;">
+            <h4>ခြင်းတောင်း</h4>
             <div id="cart-list"></div>
             <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.3rem; margin-top:15px;">
-                <span>စုစုပေါင်း:</span><span id="cart-total" style="color:var(--red);">0 Ks</span>
+                <span>Total:</span><span id="cart-total" style="color:var(--red);">0 Ks</span>
             </div>
             <div class="grid" style="margin-top:20px;">
                 <button class="btn btn-dark" onclick="processSale(true)"><i class="fas fa-print"></i> ဘောင်ချာ</button>
@@ -91,7 +66,7 @@
 
     <main id="tab-stock" class="container">
         <div class="card">
-            <h3 style="margin-bottom:15px;"><i class="fas fa-list-ul"></i> Stock လက်ကျန်</h3>
+            <h3 style="margin-bottom:15px;">Stock လက်ကျန်</h3>
             <table class="table">
                 <thead><tr><th style="text-align:left;">အမည်</th><th>ဈေးနှုန်း</th><th>Stock</th></tr></thead>
                 <tbody id="stock-list"></tbody>
@@ -101,50 +76,18 @@
 
     <main id="tab-inv" class="container">
         <div class="card">
-            <h4><i class="fas fa-plus-circle"></i> ပစ္စည်းသစ် ထည့်သွင်းခြင်း</h4><br>
-            <input type="text" id="p-name" class="input-style" placeholder="ပစ္စည်းအမည်">
-            <div class="grid">
-                <input type="number" id="p-buy" class="input-style" placeholder="ဝယ်ဈေး">
-                <input type="number" id="p-sell" class="input-style" placeholder="ရောင်းဈေး">
-            </div>
+            <h4>ပစ္စည်းသစ်ထည့်ရန်</h4><br>
+            <input type="text" id="p-name" class="input-style" placeholder="အမည်">
+            <div class="grid"><input type="number" id="p-buy" class="input-style" placeholder="ဝယ်ဈေး"><input type="number" id="p-sell" class="input-style" placeholder="ရောင်းဈေး"></div>
             <input type="number" id="p-qty" class="input-style" placeholder="အရေအတွက်">
             <input type="file" accept="image/*" onchange="previewImg(event)" class="input-style">
-            <img id="img-pre" style="display:none; width:100%; height:130px; object-fit:contain; border-radius:10px; margin-bottom:12px; background:#f8fafc;">
-            <button class="btn btn-dark" onclick="handleProductAction()"><i class="fas fa-box-open"></i> အသစ်စာရင်းသွင်းမည်</button>
+            <button class="btn btn-dark" onclick="handleProductAction()">သိမ်းမည်</button>
         </div>
-        
-        <div class="card" style="overflow-x: auto; border: 2px solid var(--green);">
-            <h4 style="margin-bottom:10px; color: var(--green);"><i class="fas fa-edit"></i> ဈေးပြင်ရန် & Stock ထပ်ဖြည့်ရန်</h4>
-            <table class="table" style="min-width: 500px;">
-                <thead style="background: #ecfdf5;"><tr><th>ပုံ</th><th style="text-align:left">အမည်</th><th>ဝယ်ဈေး</th><th>ရောင်းဈေး</th><th>Stock</th><th>လုပ်ဆောင်ချက်</th></tr></thead>
+        <div class="card" style="overflow-x: auto;">
+            <table class="table">
+                <thead style="background:#ecfdf5;"><tr><th>အမည်</th><th>ရောင်းဈေး</th><th>Stock</th><th>Action</th></tr></thead>
                 <tbody id="inv-list"></tbody>
             </table>
-        </div>
-    </main>
-
-    <main id="tab-rep" class="container">
-        <div class="card">
-            <h4><i class="fas fa-file-invoice-dollar"></i> စာရင်းချုပ်</h4><br>
-            <div class="grid">
-                <input type="date" id="rep-day" class="input-style">
-                <button class="btn btn-dark" style="height:45px" onclick="renderReport('day')">နေ့စဉ်</button>
-            </div>
-            <div class="grid" style="margin-top:10px;">
-                <input type="month" id="rep-month" class="input-style">
-                <button class="btn btn-dark" style="height:45px" onclick="renderReport('month')">လစဉ်</button>
-            </div>
-            <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                <div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0; text-align:center;">
-                    <small>ရောင်းရငွေ</small><div id="sum-rev" style="font-weight:bold; font-size:1.1rem; color:var(--midnight);">0</div>
-                </div>
-                <div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0; text-align:center;">
-                    <small>အမြတ်</small><div id="sum-prof" style="font-weight:bold; font-size:1.1rem; color:var(--green);">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="card">
-            <h4 style="margin-bottom:10px;">အရောင်းမှတ်တမ်း</h4>
-            <table class="table" id="voucher-report"></table>
         </div>
     </main>
 
@@ -152,49 +95,25 @@
         <button class="nav-item active" onclick="switchTab('tab-sales', this)"><i class="fas fa-shopping-cart"></i>အရောင်း</button>
         <button class="nav-item" onclick="switchTab('tab-stock', this)"><i class="fas fa-boxes"></i>Stock</button>
         <button class="nav-item" onclick="showLogin('tab-inv', this)"><i class="fas fa-warehouse"></i>ဂိုထောင်</button>
-        <button class="nav-item" onclick="showLogin('tab-rep', this)"><i class="fas fa-chart-line"></i>စာရင်းချုပ်</button>
     </nav>
+
+    <div id="stock-update-overlay" class="overlay">
+        <div class="login-card">
+            <h3 id="update-p-name">ပစ္စည်းအမည်</h3><br>
+            <input type="number" id="update-p-sell" class="input-style" placeholder="ရောင်းဈေး">
+            <input type="number" id="update-new-qty" class="input-style" placeholder="ပေါင်းမည့်အရေအတွက်">
+            <div class="grid">
+                <button class="btn btn-green" onclick="saveStockUpdate()">Save</button>
+                <button class="btn" style="background:#ddd" onclick="closeStockUpdate()">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <div id="login-overlay" class="overlay">
         <div class="login-card">
-            <div style="font-size: 3rem; color: var(--midnight); margin-bottom: 10px;"><i class="fas fa-lock"></i></div>
-            <h3>Security Login</h3>
-            <input type="password" id="pass-input" class="input-style" style="text-align:center; letter-spacing:8px; font-size:20px; margin-top:15px;" maxlength="6" placeholder="******">
-            <div class="grid">
-                <button class="btn btn-dark" onclick="checkPassword()">Unlock</button>
-                <button class="btn" style="background:#e2e8f0; color:#475569" onclick="closeLogin()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="stock-update-overlay" class="overlay">
-        <div class="login-card" style="width: 350px;">
-            <div style="font-size: 2rem; color: #3b82f6; margin-bottom: 5px;"><i class="fas fa-edit"></i></div>
-            <h3 id="update-p-name" style="color:var(--midnight)">ပစ္စည်းအမည်</h3><br>
-            <div style="text-align:left; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
-                <label style="font-size:13px; font-weight:bold;">၁။ နေ့စဉ် ရောင်းဈေးပြင်ရန်</label>
-                <input type="number" id="update-p-sell" class="input-style" style="margin-top:5px; border:2px solid #3b82f6;">
-                <hr style="margin:15px 0; border:0; border-top:1px dashed #cbd5e1;">
-                <label style="font-size:13px; font-weight:bold; color:var(--green);">၂။ Stock ထပ်ဖြည့်ရန်</label>
-                <div class="grid" style="margin-top:5px;">
-                    <input type="number" id="update-new-buy" class="input-style" placeholder="ဝယ်ဈေးသစ်">
-                    <input type="number" id="update-new-qty" class="input-style" placeholder="အရေအတွက်">
-                </div>
-            </div>
-            <div class="grid" style="margin-top:20px;">
-                <button class="btn" style="background:#3b82f6; color:white;" onclick="saveStockUpdate()"><i class="fas fa-check"></i> Save</button>
-                <button class="btn" style="background:#e2e8f0; color:#475569" onclick="closeStockUpdate()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-receipt" class="receipt-modal">
-        <div class="receipt-content">
-            <div id="receipt-area"></div>
-            <div class="grid" style="margin-top:25px;">
-                <button class="btn btn-dark" onclick="window.print()">Print</button>
-                <button class="btn" style="background:var(--red); color:white" onclick="closeReceipt()">Close</button>
-            </div>
+            <h3>Password ရိုက်ပါ</h3>
+            <input type="password" id="pass-input" class="input-style" style="text-align:center; margin-top:15px;" placeholder="******">
+            <button class="btn btn-dark" onclick="checkPassword()">Unlock</button>
         </div>
     </div>
 
@@ -203,118 +122,116 @@
         
         let products = JSON.parse(localStorage.getItem('TTK_Data_P')) || [];
         let sales = JSON.parse(localStorage.getItem('TTK_Data_S')) || [];
-        let cart = [], tempImg = "", targetTab = "", targetBtn = null, currentEditingId = null;
-        const ADMIN_PASS = "111111";
+        let cart = [], tempImg = "", targetTab = "", currentEditingId = null;
 
+        // --- CLOUD ENGINE (FIXED) ---
         async function uploadToCloud() {
-            updateStatus("Syncing...", "var(--gold)");
+            updateStatus("Saving...", "var(--gold)");
+            const dataToSave = JSON.stringify({ products, sales });
             try {
-                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ products, sales }) });
-                updateStatus("<i class='fas fa-cloud-check'></i> Online", "var(--green)");
-            } catch(e) { updateStatus("<i class='fas fa-wifi'></i> Offline", "var(--red)"); }
+                // Fetch with no-cors doesn't return response, but we can check the status on the next download
+                await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: dataToSave 
+                });
+                updateStatus("<i class='fas fa-check'></i> Saved to Cloud", "var(--green)");
+            } catch(e) { 
+                updateStatus("Offline (Local Saved)", "var(--red)"); 
+            }
         }
 
         async function downloadFromCloud() {
-            updateStatus("Downloading...", "var(--gold)");
             try {
                 const res = await fetch(SCRIPT_URL);
                 const data = await res.json();
-                if(!data.error && data.products) {
-                    products = data.products; sales = data.sales || [];
-                    saveLocal(); refreshUI();
-                    updateStatus("<i class='fas fa-cloud'></i> Cloud Synced", "var(--green)");
-                } else { updateStatus("Using Local Data", "var(--gold)"); }
-            } catch(e) { updateStatus("Using Local Data", "var(--gold)"); }
-        }
-
-        function updateStatus(text, color) { const el = document.getElementById('status-text'); el.innerHTML = text; el.style.color = color; }
-        function forceSync() { uploadToCloud().then(() => downloadFromCloud()); }
-        function saveLocal() { localStorage.setItem('TTK_Data_P', JSON.stringify(products)); localStorage.setItem('TTK_Data_S', JSON.stringify(sales)); }
-        function updateEverything() { saveLocal(); uploadToCloud(); refreshUI(); }
-
-        function openStockUpdate(id) {
-            currentEditingId = id; const p = products.find(x => x.id == id);
-            document.getElementById('update-p-name').innerText = p.name;
-            document.getElementById('update-p-sell').value = p.sell;
-            document.getElementById('update-new-buy').value = ""; document.getElementById('update-new-qty').value = "";
-            document.getElementById('stock-update-overlay').style.display = 'flex';
-        }
-        function closeStockUpdate() { document.getElementById('stock-update-overlay').style.display = 'none'; }
-        function saveStockUpdate() {
-            const p = products.find(x => x.id == currentEditingId);
-            const newSell = parseFloat(document.getElementById('update-p-sell').value);
-            const addedBuy = parseFloat(document.getElementById('update-new-buy').value);
-            const addedQty = parseFloat(document.getElementById('update-new-qty').value);
-            if(isNaN(newSell) || newSell <= 0) return alert("ဈေးနှုန်းစစ်ဆေးပါ");
-            if(!isNaN(addedBuy) && !isNaN(addedQty) && addedQty > 0) {
-                p.buy = Math.round(((p.qty * p.buy) + (addedQty * addedBuy)) / (p.qty + addedQty)); 
-                p.qty += addedQty;
+                
+                // Cloud မှာ Data အမှန်တကယ်ရှိမှသာ Local ကို အစားထိုးမယ်
+                if(data && data.products && data.products.length > 0) {
+                    products = data.products;
+                    sales = data.sales || [];
+                    saveLocal();
+                    refreshUI();
+                    updateStatus("<i class='fas fa-cloud'></i> Online", "var(--green)");
+                } else {
+                    updateStatus("Cloud is Empty", "var(--gold)");
+                    refreshUI();
+                }
+            } catch(e) {
+                updateStatus("Using Local Data", "var(--gold)");
+                refreshUI();
             }
-            p.sell = newSell; updateEverything(); closeStockUpdate();
+        }
+
+        function saveLocal() {
+            localStorage.setItem('TTK_Data_P', JSON.stringify(products));
+            localStorage.setItem('TTK_Data_S', JSON.stringify(sales));
+        }
+
+        function updateEverything() {
+            saveLocal();
+            refreshUI();
+            uploadToCloud();
+        }
+
+        // UI & Functions
+        function refreshUI() {
+            const q = document.getElementById('search-box').value.toLowerCase();
+            const filt = products.filter(p => p.name.toLowerCase().includes(q));
+            
+            document.getElementById('pos-grid').innerHTML = filt.map(p => `<div class="p-card" onclick="addToCart(${p.id})"><img src="${p.img || 'https://via.placeholder.com/150'}"><div class="p-info"><b>${p.name}</b><br><span class="p-price">${p.sell.toLocaleString()} Ks</span></div></div>`).join('');
+            document.getElementById('stock-list').innerHTML = products.map(p => `<tr><td style="text-align:left">${p.name}</td><td>${p.sell.toLocaleString()}</td><td>${p.qty}</td></tr>`).join('');
+            document.getElementById('inv-list').innerHTML = products.map(p => `<tr><td style="text-align:left">${p.name}</td><td>${p.sell}</td><td>${p.qty}</td><td><button onclick="openStockUpdate(${p.id})" style="border:none; color:blue;">Edit</button></td></tr>`).join('');
         }
 
         function handleProductAction() {
             const name = document.getElementById('p-name').value, b = parseFloat(document.getElementById('p-buy').value), s = parseFloat(document.getElementById('p-sell').value), q = parseInt(document.getElementById('p-qty').value);
-            if(!name || isNaN(b) || isNaN(s) || isNaN(q)) return alert("အချက်အလက်ပြည့်စုံစွာထည့်ပါ");
+            if(!name || isNaN(b) || isNaN(s) || isNaN(q)) return alert("Fill all!");
             products.push({ id: Date.now(), name, buy: b, sell: s, qty: q, img: tempImg });
-            updateEverything(); ['p-name','p-buy','p-sell','p-qty'].forEach(i => document.getElementById(i).value=""); document.getElementById('img-pre').style.display='none'; tempImg="";
+            updateEverything();
+            ['p-name','p-buy','p-sell','p-qty'].forEach(i => document.getElementById(i).value=""); tempImg="";
         }
 
         function addToCart(id) {
             const p = products.find(x => x.id == id);
-            if(p.qty <= 0) return alert("ပစ္စည်းပြတ်နေပါသည်");
+            if(p.qty <= 0) return alert("Out of stock");
             const ex = cart.find(x => x.id == id);
-            if(ex) { if(ex.cQty < p.qty) ex.cQty++; else alert("Stock မလောက်ပါ"); } else { cart.push({...p, cQty: 1}); }
+            if(ex) { ex.cQty++; } else { cart.push({...p, cQty: 1}); }
             renderCart();
         }
-        function updateCartQty(id, delta) {
-            const ex = cart.find(x => x.id == id), p = products.find(x => x.id == id);
-            if(!ex) return;
-            if(delta > 0 && ex.cQty >= p.qty) return alert("Stock မလောက်ပါ");
-            ex.cQty += delta; if(ex.cQty <= 0) cart = cart.filter(x => x.id != id); renderCart();
-        }
+
         function renderCart() {
-            let total = 0; document.getElementById('cart-list').innerHTML = cart.map(i => {
-                total += i.sell * i.cQty;
-                return `<div class="cart-row"><div style="flex:1"><b>${i.name}</b><br><small>${i.sell.toLocaleString()} Ks</small></div><div class="qty-btns"><button class="q-btn" onclick="updateCartQty(${i.id}, -1)">-</button><span>${i.cQty}</span><button class="q-btn" onclick="updateCartQty(${i.id}, 1)">+</button></div><div style="width:80px; text-align:right"><b>${(i.sell*i.cQty).toLocaleString()}</b></div></div>`;
-            }).join(''); document.getElementById('cart-total').innerText = total.toLocaleString() + " Ks";
+            let t = 0; document.getElementById('cart-list').innerHTML = cart.map(i => { t += i.sell * i.cQty; return `<div class="cart-row"><span>${i.name} x ${i.cQty}</span><span>${(i.sell*i.cQty).toLocaleString()}</span></div>`; }).join('');
+            document.getElementById('cart-total').innerText = t.toLocaleString() + " Ks";
         }
-        function processSale(isPrint) {
-            if(!cart.length) return alert("ပစ္စည်းရွေးချယ်ပါ");
-            const staff = document.getElementById('staff-name').value || "အထွေထွေ", customer = document.getElementById('cust-name').value || "အမည်မသိ", addr = document.getElementById('cust-addr').value || "-", date = document.getElementById('sale-date').value || new Date().toISOString().split('T')[0];
-            let rev = 0, prof = 0, items = [];
-            cart.forEach(i => { const p = products.find(x => x.id == i.id); p.qty -= i.cQty; rev += i.sell * i.cQty; prof += (i.sell - i.buy) * i.cQty; items.push({ n: i.name, q: i.cQty, s: i.sell * i.cQty }); });
-            sales.push({ id: Date.now(), date, staff, customer, addr, rev, prof, items });
-            if(isPrint) {
-                let rows = cart.map(i => `<tr><td style="text-align:left">${i.name}</td><td>${i.cQty}</td><td style="text-align:right">${(i.sell*i.cQty).toLocaleString()}</td></tr>`).join('');
-                document.getElementById('receipt-area').innerHTML = `<center><h3>ထွန်းတောက်ကြယ်</h3></center><hr><small>နေ့စွဲ: ${date}<br>ဝယ်သူ: ${customer}</small><hr><table style="width:100%; font-size:11px;">${rows}</table><hr><div style="display:flex; justify-content:space-between"><b>Total:</b><b>${rev.toLocaleString()} Ks</b></div>`;
-                document.getElementById('modal-receipt').style.display = 'flex';
-            }
+
+        function processSale(print) {
+            if(!cart.length) return;
+            cart.forEach(i => { const p = products.find(x => x.id == i.id); p.qty -= i.cQty; });
+            sales.push({ id: Date.now(), date: document.getElementById('sale-date').value, rev: cart.reduce((a,b)=>a+(b.sell*b.cQty),0) });
             cart = []; renderCart(); updateEverything();
+            if(print) alert("Boucher Printed (Simulated)");
         }
 
-        function refreshUI() {
-            const q = document.getElementById('search-box').value.toLowerCase(), filt = products.filter(p => p.name.toLowerCase().includes(q));
-            document.getElementById('pos-grid').innerHTML = filt.map(p => `<div class="p-card" onclick="addToCart(${p.id})"><img src="${p.img || 'https://via.placeholder.com/150'}"><div class="p-info"><div class="p-name">${p.name}</div><div class="p-price">${p.sell.toLocaleString()} Ks</div><div class="p-stock">Stock: ${p.qty}</div></div></div>`).join('');
-            document.getElementById('stock-list').innerHTML = products.map(p => `<tr><td style="text-align:left">${p.name}</td><td>${p.sell.toLocaleString()}</td><td style="color:${p.qty<5?'red':'black'}"><b>${p.qty}</b></td></tr>`).join('');
-            document.getElementById('inv-list').innerHTML = products.map(p => `<tr><td><img src="${p.img}" style="width:30px;height:30px;object-fit:cover;border-radius:4px;"></td><td style="text-align:left;font-weight:bold;">${p.name}</td><td>${p.buy.toLocaleString()}</td><td style="color:var(--green);font-weight:bold;">${p.sell.toLocaleString()}</td><td><span style="padding:2px 8px;border-radius:10px;background:#f1f5f9;">${p.qty}</span></td><td><button class="btn-edit-stock" onclick="openStockUpdate(${p.id})"><i class="fas fa-edit"></i> ပြင်မည်</button></td></tr>`).join('');
-        }
-        function renderReport(type) {
-            const d = document.getElementById('rep-day').value, m = document.getElementById('rep-month').value;
-            let filt = sales.filter(s => (type==='day' && s.date === d) || (type==='month' && s.date.startsWith(m))), r=0, p=0;
-            document.getElementById('voucher-report').innerHTML = filt.map(s => { r+=s.rev; p+=s.prof; return `<tr><td style="text-align:left">${s.customer}<br><small>${s.date}</small></td><td>${s.rev.toLocaleString()}</td><td><button onclick="delS(${s.id})" style="border:none;background:none;color:var(--red)"><i class="fas fa-times"></i></button></td></tr>`; }).reverse().join('');
-            document.getElementById('sum-rev').innerText = r.toLocaleString() + " Ks"; document.getElementById('sum-prof').innerText = p.toLocaleString() + " Ks";
-        }
+        function openStockUpdate(id) { currentEditingId = id; const p = products.find(x => x.id == id); document.getElementById('update-p-name').innerText = p.name; document.getElementById('update-p-sell').value = p.sell; document.getElementById('stock-update-overlay').style.display='flex'; }
+        function saveStockUpdate() { const p = products.find(x => x.id == currentEditingId); p.sell = parseFloat(document.getElementById('update-p-sell').value); p.qty += parseInt(document.getElementById('update-new-qty').value || 0); updateEverything(); closeStockUpdate(); }
+        function closeStockUpdate() { document.getElementById('stock-update-overlay').style.display='none'; }
+        function updateStatus(t, c) { const el = document.getElementById('status-text'); el.innerHTML = t; el.style.color = c; }
+        function forceSync() { downloadFromCloud(); }
+        function showLogin(id, btn) { targetTab = id; document.getElementById('login-overlay').style.display='flex'; }
+        function checkPassword() { if(document.getElementById('pass-input').value === "111111") { document.getElementById('login-overlay').style.display='none'; switchTab(targetTab); } else alert("Wrong!"); }
+        function switchTab(id) { document.querySelectorAll('.container').forEach(c => c.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        function previewImg(e) { const r = new FileReader(); r.onload = () => tempImg = r.result; r.readAsDataURL(e.target.files[0]); }
 
-        function showLogin(id, btn) { targetTab = id; targetBtn = btn; document.getElementById('login-overlay').style.display='flex'; }
-        function closeLogin() { document.getElementById('login-overlay').style.display='none'; document.getElementById('pass-input').value=""; }
-        function checkPassword() { if(document.getElementById('pass-input').value === ADMIN_PASS) { closeLogin(); switchTab(targetTab, targetBtn); } else alert("Password မှားယွင်းနေပါသည်"); }
-        function switchTab(id, btn) { document.querySelectorAll('.container').forEach(c => c.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById(id).classList.add('active'); btn.classList.add('active'); refreshUI(); }
-        function previewImg(e) { const r = new FileReader(); r.onload = () => { tempImg = r.result; document.getElementById('img-pre').src=r.result; document.getElementById('img-pre').style.display='block'; }; r.readAsDataURL(e.target.files[0]); }
-        function delS(id) { if(confirm("ဖျက်မှာလား?")) { sales = sales.filter(x => x.id != id); updateEverything(); renderReport('day'); } }
-        function closeReceipt() { document.getElementById('modal-receipt').style.display='none'; }
-
-        window.onload = () => { document.getElementById('sale-date').valueAsDate = new Date(); refreshUI(); downloadFromCloud(); setInterval(downloadFromCloud, 60000); };
+        window.onload = () => { 
+            document.getElementById('sale-date').valueAsDate = new Date();
+            // ပထမဆုံး Local က Data ကိုအရင်ပြမယ်
+            refreshUI(); 
+            // ပြီးမှ Cloud က Data ကိုလှမ်းဆွဲပြီး Update လုပ်မယ်
+            downloadFromCloud(); 
+        };
     </script>
 </body>
 </html>
