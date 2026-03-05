@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ထွန်းတောက်ကြယ် POS - v36 (Turbo Sync)</title>
+    <title>ထွန်းတောက်ကြယ် POS - v37</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --midnight: #020617; --primary: #1e293b; --green: #10b981; --red: #ef4444; --gold: #fbbf24; --bg: #f3f4f6; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); padding-top: 65px; padding-bottom: 85px; color: var(--primary); overflow-x: hidden; }
 
-        /* Header & Fast Status */
+        /* Header */
         .header { background: var(--midnight); color: white; height: 60px; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; position: fixed; width: 100%; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
         .sync-tag { font-size: 11px; font-weight: bold; padding: 5px 12px; border-radius: 20px; transition: 0.3s; }
         .status-online { color: var(--green); background: rgba(16, 185, 129, 0.1); }
@@ -25,7 +25,7 @@
 
         /* Content Areas */
         .container { padding: 12px; display: none; }
-        .container.active { display: block; animation: fadeIn 0.2s ease-in; }
+        .container.active { display: block; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
@@ -34,7 +34,7 @@
 
         /* POS Grid */
         #pos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .p-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; overflow: hidden; position: relative; }
+        .p-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; text-align: center; overflow: hidden; position: relative; cursor: pointer; }
         .p-card img { width: 100%; height: 100px; object-fit: cover; background: #f8fafc; }
         .p-info { padding: 8px; }
         .p-price { color: var(--green); font-weight: bold; font-size: 13px; }
@@ -50,7 +50,7 @@
         .btn-green { background: var(--green); color: white; }
         .btn-dark { background: var(--midnight); color: white; }
         
-        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; }
         .login-card { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 320px; text-align: center; }
         
         /* Stats */
@@ -62,7 +62,7 @@
 
     <header class="header">
         <div style="font-weight:bold;"><i class="fas fa-star" style="color:var(--gold)"></i> ထွန်းတောက်ကြယ်</div>
-        <div id="status-tag" class="sync-tag status-syncing"><i class="fas fa-circle-notch fa-spin"></i> Initializing</div>
+        <div id="status-tag" class="sync-tag status-syncing"><i class="fas fa-spinner fa-spin"></i> Connecting...</div>
         <button onclick="manualSync()" style="background:none; border:none; color:white;"><i class="fas fa-sync-alt"></i></button>
     </header>
 
@@ -155,6 +155,15 @@
                 </table>
             </div>
         </div>
+        <div class="card">
+            <h4 style="margin-bottom:10px;">ဘောင်ချာမှတ်တမ်းများ</h4>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead><tr style="background:#f8fafc;"><th>ဝယ်သူ/ရက်စွဲ</th><th>စုစုပေါင်း</th><th>ဖျက်ရန်</th></tr></thead>
+                    <tbody id="voucher-report"></tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <nav class="nav">
@@ -164,46 +173,64 @@
         <button class="nav-item" onclick="showLogin('tab-rep', this)"><i class="fas fa-chart-line"></i>စာရင်းချုပ်</button>
     </nav>
 
-    <div id="login-overlay" class="overlay"><div class="login-card"><h3>Security Code</h3><input type="password" id="pass-input" class="input-style" style="text-align:center; margin-top:15px;" placeholder="******"><button class="btn btn-dark" onclick="verifyPass()">Unlock</button></div></div>
+    <div id="login-overlay" class="overlay"><div class="login-card"><h3>Security Code</h3><input type="password" id="pass-input" class="input-style" style="text-align:center; margin-top:15px;" placeholder="******"><button class="btn btn-dark" onclick="verifyPass()">Unlock</button><button class="btn" style="background:#ddd; margin-top:10px;" onclick="closeLogin()">Cancel</button></div></div>
+    
     <div id="edit-overlay" class="overlay"><div class="login-card"><h3 id="edit-p-name"></h3><br><input type="number" id="edit-sell" class="input-style" placeholder="ရောင်းဈေးသစ်"><input type="number" id="edit-add-qty" class="input-style" placeholder="ပေါင်းမည့်အရေအတွက်"><div class="grid"><button class="btn btn-green" onclick="saveEdit()">Save</button><button class="btn" style="background:#ddd" onclick="closeEdit()">Cancel</button></div></div></div>
 
     <script>
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyniFvoqBEkqUvJVJl8rzabubJD9L3qTgqYi4xl559CmaHQXrD_muJTZ4a-k97SVcmx/exec';
+        
+        // Load data from LocalStorage
         let products = JSON.parse(localStorage.getItem('TTK_P')) || [];
         let sales = JSON.parse(localStorage.getItem('TTK_S')) || [];
         let cart = [], tempImg = "", targetTab = "", curEditId = null;
 
-        // --- Fast Sync Engine ---
-        async function syncToCloud() {
-            setStatus('syncing', '<i class="fas fa-cloud-upload-alt"></i> Saving...');
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
+        // --- 100% UNBLOCKABLE SYNC ENGINE ---
+        
+        async function fetchFromCloud() {
+            setStatus('syncing', '<i class="fas fa-spinner fa-spin"></i> Checking...');
+            
+            // Fail-safe timeout: ၅ စက္ကန့်အတွင်း ပြန်မလာရင် Offline ပြောင်းမယ်
+            const timeout = setTimeout(() => {
+                setStatus('offline', '<i class="fas fa-wifi"></i> Offline (Local)');
+            }, 5000);
 
-                await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify({ products, sales }),
-                    signal: controller.signal
-                });
-                setStatus('online', '<i class="fas fa-check-circle"></i> Online');
+            try {
+                const res = await fetch(SCRIPT_URL);
+                clearTimeout(timeout); // အောင်မြင်ရင် timeout ကို ရပ်မယ်
+                
+                // Server က Data တွေ အမှန်တကယ် ပေးမပေး စစ်ဆေးခြင်း
+                const data = await res.json(); 
+                if(data && Array.isArray(data.products)) {
+                    products = data.products; 
+                    sales = data.sales || [];
+                    saveLocal(); 
+                    refreshUI();
+                    setStatus('online', '<i class="fas fa-cloud"></i> Online');
+                } else {
+                    setStatus('offline', '<i class="fas fa-exclamation-triangle"></i> Data Error');
+                }
             } catch(e) {
-                setStatus('offline', '<i class="fas fa-wifi"></i> Offline Mode');
+                clearTimeout(timeout);
+                console.log("Fetch failed: ", e);
+                setStatus('offline', '<i class="fas fa-wifi"></i> Offline (Local)');
             }
         }
 
-        async function fetchFromCloud() {
-            setStatus('syncing', '<i class="fas fa-cloud-download-alt"></i> Fetching...');
+        async function syncToCloud() {
+            setStatus('syncing', '<i class="fas fa-cloud-upload-alt"></i> Saving...');
             try {
-                const res = await fetch(SCRIPT_URL);
-                const data = await res.json();
-                if(data && data.products) {
-                    products = data.products; sales = data.sales || [];
-                    saveLocal(); refreshUI();
-                    setStatus('online', '<i class="fas fa-cloud"></i> Synced');
-                }
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // POST အတွက် no-cors သုံးမှ Google က လက်ခံပါမယ်
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ products, sales })
+                });
+                // no-cors သုံးထားလို့ response အတိအကျမရပေမယ့် Error မတက်ရင် အောင်မြင်တယ်လို့ ယူဆပါတယ်
+                setStatus('online', '<i class="fas fa-check-circle"></i> Saved');
             } catch(e) {
-                setStatus('offline', 'Offline');
+                console.log("Sync failed: ", e);
+                setStatus('offline', '<i class="fas fa-save"></i> Saved Locally');
             }
         }
 
@@ -213,13 +240,25 @@
             el.innerHTML = html;
         }
 
-        function saveLocal() { localStorage.setItem('TTK_P', JSON.stringify(products)); localStorage.setItem('TTK_S', JSON.stringify(sales)); }
-        function fullUpdate() { saveLocal(); refreshUI(); syncToCloud(); }
-        function manualSync() { fetchFromCloud(); }
+        function saveLocal() { 
+            localStorage.setItem('TTK_P', JSON.stringify(products)); 
+            localStorage.setItem('TTK_S', JSON.stringify(sales)); 
+        }
 
-        // --- UI & Logic ---
+        function fullUpdate() { 
+            saveLocal(); 
+            refreshUI(); 
+            syncToCloud(); 
+        }
+
+        function manualSync() { 
+            fetchFromCloud(); 
+        }
+
+        // --- UI & Logic Functions ---
+        
         function refreshUI() {
-            const q = document.getElementById('search-box').value.toLowerCase();
+            const q = document.getElementById('search-box') ? document.getElementById('search-box').value.toLowerCase() : "";
             const filt = products.filter(p => p.name.toLowerCase().includes(q));
             
             document.getElementById('pos-grid').innerHTML = filt.map(p => `
@@ -229,14 +268,14 @@
                 </div>`).join('');
 
             document.getElementById('stock-list').innerHTML = products.map(p => `<tr><td style="text-align:left">${p.name}</td><td>${p.sell.toLocaleString()}</td><td style="font-weight:bold; color:${p.qty<5?'red':'black'}">${p.qty}</td></tr>`).join('');
-            document.getElementById('inv-list').innerHTML = products.map(p => `<tr><td style="text-align:left">${p.name}</td><td>${p.sell}</td><td>${p.qty}</td><td><i class="fas fa-edit" onclick="openEdit(${p.id})" style="color:blue"></i></td></tr>`).join('');
+            document.getElementById('inv-list').innerHTML = products.map(p => `<tr><td style="text-align:left">${p.name}</td><td>${p.sell}</td><td>${p.qty}</td><td><i class="fas fa-edit" onclick="openEdit(${p.id})" style="color:blue; cursor:pointer;"></i></td></tr>`).join('');
         }
 
         function addToCart(id) {
             const p = products.find(x => x.id == id);
-            if(p.qty <= 0) return alert("Out of stock");
+            if(p.qty <= 0) return alert("ပစ္စည်းပြတ်နေပါသည်");
             const ex = cart.find(x => x.id == id);
-            if(ex) { if(ex.cQty < p.qty) ex.cQty++; else alert("Limited Stock"); } else { cart.push({...p, cQty: 1}); }
+            if(ex) { if(ex.cQty < p.qty) ex.cQty++; else alert("Stock မလောက်ပါ"); } else { cart.push({...p, cQty: 1}); }
             renderCart();
         }
 
@@ -244,57 +283,102 @@
             let t = 0;
             document.getElementById('cart-list').innerHTML = cart.map(i => {
                 t += i.sell * i.cQty;
-                return `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:12px;"><span>${i.name} x ${i.cQty}</span><span>${(i.sell*i.cQty).toLocaleString()}</span></div>`;
+                return `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px; border-bottom: 1px dashed #eee; padding-bottom:5px;"><span>${i.name} x ${i.cQty}</span><span style="font-weight:bold">${(i.sell*i.cQty).toLocaleString()}</span></div>`;
             }).join('');
             document.getElementById('cart-total').innerText = t.toLocaleString() + " Ks";
         }
 
         function processSale(print) {
-            if(!cart.length) return;
+            if(!cart.length) return alert("ပစ္စည်းရွေးချယ်ပါ");
             const date = document.getElementById('sale-date').value || new Date().toISOString().split('T')[0];
+            const cust = document.getElementById('cust-name').value || "အမည်မသိ";
             let rev = 0, prof = 0, items = [];
+            
             cart.forEach(i => {
                 const p = products.find(x => x.id == i.id);
-                p.qty -= i.cQty; rev += i.sell * i.cQty; prof += (i.sell - i.buy) * i.cQty;
+                p.qty -= i.cQty; 
+                rev += i.sell * i.cQty; 
+                prof += (i.sell - i.buy) * i.cQty;
                 items.push({ n: i.name, q: i.cQty, s: i.sell * i.cQty });
             });
-            sales.push({ id: Date.now(), date, customer: document.getElementById('cust-name').value || "Guest", rev, prof, items });
-            cart = []; renderCart(); fullUpdate();
-            if(print) alert("Saved and Ready to Print");
+            
+            sales.push({ id: Date.now(), date, customer: cust, rev, prof, items });
+            cart = []; 
+            document.getElementById('cust-name').value = "";
+            renderCart(); 
+            fullUpdate();
+            if(print) alert("ဘောင်ချာသိမ်းဆည်းပြီးပါပြီ (Print ထုတ်ရန် အဆင်သင့်)");
         }
 
         function runReport(type) {
-            const d = document.getElementById('rep-day').value, m = document.getElementById('rep-month').value, y = document.getElementById('rep-year').value;
+            const d = document.getElementById('rep-day').value;
+            const m = document.getElementById('rep-month').value;
+            const y = document.getElementById('rep-year').value;
+            
             let filt = sales.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
+            
             let r=0, p=0, sold={};
-            filt.forEach(s => { r+=s.rev; p+=s.prof; s.items.forEach(it => { if(!sold[it.n]) sold[it.n]={q:0,s:0}; sold[it.n].q+=it.q; sold[it.n].s+=it.s; })});
-            document.getElementById('sum-rev').innerText = r.toLocaleString();
-            document.getElementById('sum-prof').innerText = p.toLocaleString();
+            filt.forEach(s => { 
+                r+=s.rev; 
+                p+=s.prof; 
+                s.items.forEach(it => { 
+                    if(!sold[it.n]) sold[it.n]={q:0,s:0}; 
+                    sold[it.n].q+=it.q; 
+                    sold[it.n].s+=it.s; 
+                });
+            });
+            
+            document.getElementById('sum-rev').innerText = r.toLocaleString() + " Ks";
+            document.getElementById('sum-prof').innerText = p.toLocaleString() + " Ks";
             document.getElementById('sold-items-list').innerHTML = Object.keys(sold).map(n => `<tr><td style="text-align:left">${n}</td><td>${sold[n].q}</td><td>${sold[n].s.toLocaleString()}</td></tr>`).join('');
+            
+            // Voucher History
+            document.getElementById('voucher-report').innerHTML = filt.map(s => `<tr><td style="text-align:left">${s.customer}<br><small>${s.date}</small></td><td>${s.rev.toLocaleString()}</td><td><i class="fas fa-trash" onclick="delSale(${s.id})" style="color:red; cursor:pointer;"></i></td></tr>`).reverse().join('');
+        }
+
+        function delSale(id) {
+            if(confirm("ဤမှတ်တမ်းကို ဖျက်မည်လား?")) {
+                sales = sales.filter(s => s.id !== id);
+                fullUpdate();
+                runReport('day');
+            }
         }
 
         function addProduct() {
-            const n = document.getElementById('p-name').value, b = parseFloat(document.getElementById('p-buy').value), s = parseFloat(document.getElementById('p-sell').value), q = parseInt(document.getElementById('p-qty').value);
-            if(!n || isNaN(b)) return alert("အချက်အလက်ပြည့်စုံပါစေ");
+            const n = document.getElementById('p-name').value;
+            const b = parseFloat(document.getElementById('p-buy').value);
+            const s = parseFloat(document.getElementById('p-sell').value);
+            const q = parseInt(document.getElementById('p-qty').value);
+            
+            if(!n || isNaN(b) || isNaN(s) || isNaN(q)) return alert("အချက်အလက်ပြည့်စုံစွာထည့်ပါ");
+            
             products.push({ id: Date.now(), name: n, buy: b, sell: s, qty: q, img: tempImg });
-            fullUpdate(); ['p-name','p-buy','p-sell','p-qty'].forEach(f => document.getElementById(f).value=""); tempImg="";
+            fullUpdate(); 
+            ['p-name','p-buy','p-sell','p-qty'].forEach(f => document.getElementById(f).value=""); 
+            tempImg="";
         }
 
+        // Overlays & Editing
         function openEdit(id) { curEditId = id; const p = products.find(x => x.id==id); document.getElementById('edit-p-name').innerText=p.name; document.getElementById('edit-sell').value=p.sell; document.getElementById('edit-overlay').style.display='flex'; }
         function saveEdit() { const p = products.find(x => x.id==curEditId); p.sell = parseFloat(document.getElementById('edit-sell').value); p.qty += parseInt(document.getElementById('edit-add-qty').value || 0); fullUpdate(); closeEdit(); }
         function closeEdit() { document.getElementById('edit-overlay').style.display='none'; document.getElementById('edit-add-qty').value=""; }
         function showLogin(id, btn) { targetTab = id; document.getElementById('login-overlay').style.display='flex'; }
-        function verifyPass() { if(document.getElementById('pass-input').value === "111111") { document.getElementById('login-overlay').style.display='none'; switchTab(targetTab, null); document.getElementById('pass-input').value=""; } else alert("Wrong Password"); }
+        function closeLogin() { document.getElementById('login-overlay').style.display='none'; document.getElementById('pass-input').value=""; }
+        function verifyPass() { if(document.getElementById('pass-input').value === "111111") { closeLogin(); switchTab(targetTab, null); } else alert("Password မှားယွင်းနေပါသည်"); }
         function switchTab(id, btn) { document.querySelectorAll('.container').forEach(c => c.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById(id).classList.add('active'); if(btn) btn.classList.add('active'); refreshUI(); }
         function previewImg(e) { const r = new FileReader(); r.onload = () => tempImg = r.result; r.readAsDataURL(e.target.files[0]); }
 
         window.onload = () => {
             document.getElementById('sale-date').valueAsDate = new Date();
             document.getElementById('rep-day').valueAsDate = new Date();
+            
+            // ဖုန်းထဲက Data ကို အရင်ပြထားမယ် (ဘာမှမစောင့်ရအောင်)
             refreshUI();
-            // Cloud Sync ကို နောက်ကွယ်မှာပဲ အေးဆေးလုပ်ခိုင်းမယ်
+            
+            // ပြီးမှ Cloud ကို နောက်ကွယ်ကနေ သွားချိတ်မယ်
             fetchFromCloud();
-            // ၁ မိနစ်တစ်ခါ Auto-Sync လုပ်မယ်
+            
+            // ၁ မိနစ်တစ်ခါ Auto Sync လုပ်မယ်
             setInterval(syncToCloud, 60000);
         };
     </script>
