@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ထွန်းတောက်ကြယ် POS - v22 (Final Sync)</title>
+    <title>ထွန်းတောက်ကြယ် POS - v24</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --midnight: #020617; --bg-light: #f1f5f9; --border: #e2e8f0; --green: #10b981; --red: #ef4444; --gold: #fbbf24; --blue: #3b82f6; }
@@ -27,7 +27,6 @@
         .btn-blue { background: var(--blue); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
         .btn-red { background: var(--red); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; }
 
-        /* Grid & Cart */
         .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
         .p-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 8px; text-align: center; }
         .p-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 5px; background: #eee; }
@@ -38,7 +37,6 @@
         .data-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
         .data-table th, .data-table td { padding: 8px; border: 1px solid #eee; text-align: center; }
         
-        /* Modals */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; padding: 20px; }
         .modal-content { background: white; width: 100%; max-width: 380px; margin: 40px auto; padding: 20px; border-radius: 15px; max-height: 85vh; overflow-y: auto; }
     </style>
@@ -47,8 +45,8 @@
 
     <header class="top-bar">
         <div class="brand-name"><i class="fas fa-star" style="color:var(--gold)"></i> ထွန်းတောက်ကြယ်</div>
-        <div id="sync-status">Cloud Syncing...</div>
-        <button onclick="downloadFromCloud()" style="color:var(--green); background:none; border:none; font-size: 1.2rem;"><i class="fas fa-sync"></i></button>
+        <div id="sync-status">Checking Cloud...</div>
+        <button onclick="downloadFromCloud()" style="color:white; background:none; border:none; font-size: 1.1rem;"><i class="fas fa-sync-alt"></i></button>
     </header>
 
     <section id="sales-tab" class="tab-pane active">
@@ -112,23 +110,22 @@
 
     <script>
         // --- GOOGLE SCRIPT URL INTEGRATED ---
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzPlFu-sRoB4UrhHB-_mQQb0MkZALSDpaB8eJYFx6HkfeQqlxgcef76nYqNc54Sb04_ew/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzSNbRHoYallTZQC7W1HNhu6Bm2XxnZ0DBVtErgWfYD65_mTsV7rGFMaN8BeCsDAfNRvA/exec';
         
-        const STORAGE_P = 'TTK_PROD_V10', STORAGE_S = 'TTK_SALE_V10';
+        const STORAGE_P = 'TTK_PROD_V24', STORAGE_S = 'TTK_SALE_V24';
         let db_p = JSON.parse(localStorage.getItem(STORAGE_P)) || [];
         let db_s = JSON.parse(localStorage.getItem(STORAGE_S)) || [];
         let currentCart = [], uploadedImg = "", selectedProdId = null;
 
-        // --- CLOUD SYNC LOGIC ---
+        // --- CLOUD SYNC ---
         async function uploadToCloud() {
-            document.getElementById('sync-status').innerText = "Saving to Cloud...";
+            document.getElementById('sync-status').innerText = "Cloud Saving...";
             document.getElementById('sync-status').style.color = "var(--gold)";
+            
             try {
-                // Fetch with POST to save data
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    cache: 'no-cache',
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({ products: db_p, sales: db_s })
                 });
@@ -141,34 +138,31 @@
         }
 
         async function downloadFromCloud() {
-            document.getElementById('sync-status').innerText = "Updating...";
+            document.getElementById('sync-status').innerText = "Syncing...";
             try {
                 const res = await fetch(SCRIPT_URL);
                 const data = await res.json();
                 
-                // Only replace local data if cloud data exists to prevent accidental loss
-                if(data.products && data.products.length > 0) {
+                // If cloud has data, sync it. If cloud empty but local has data, upload.
+                if(data && data.products && data.products.length > 0) {
                     db_p = data.products;
+                    db_s = data.sales || [];
                     localStorage.setItem(STORAGE_P, JSON.stringify(db_p));
-                } else if (db_p.length > 0) {
-                    // If cloud is empty but local has data, upload local to cloud
-                    uploadToCloud();
-                }
-
-                if(data.sales && data.sales.length > 0) {
-                    db_s = data.sales;
                     localStorage.setItem(STORAGE_S, JSON.stringify(db_s));
+                } else if (db_p.length > 0) {
+                    uploadToCloud();
                 }
 
                 syncAll();
                 document.getElementById('sync-status').innerText = "Online (Synced)";
                 document.getElementById('sync-status').style.color = "var(--green)";
             } catch (e) {
-                document.getElementById('sync-status').innerText = "Connection Error";
+                document.getElementById('sync-status').innerText = "Conn Error";
+                document.getElementById('sync-status').style.color = "var(--red)";
             }
         }
 
-        // --- CORE FUNCTIONS ---
+        // --- ALL FEATURES ---
         function syncAll() { renderPOS(); renderStock(); renderInv(); }
         function save() { 
             localStorage.setItem(STORAGE_P, JSON.stringify(db_p)); 
@@ -183,7 +177,6 @@
             syncAll();
         }
 
-        // POS & CART
         function renderPOS(items=db_p) {
             document.getElementById('pos-grid').innerHTML = items.map(p=>`
                 <div class="p-card" onclick="addToCart(${p.id})">
@@ -198,7 +191,7 @@
             const p = db_p.find(x=>x.id==id);
             if(p.qty<=0) return alert("ကုန်နေပါပြီ");
             const ex = currentCart.find(x=>x.id==id);
-            if(ex) { if(ex.cQty < p.qty) ex.cQty++; else alert("Stock ထက်ပိုရောင်းမရပါ"); }
+            if(ex) { if(ex.cQty < p.qty) ex.cQty++; else alert("Stock မလောက်ပါ"); }
             else { currentCart.push({...p, cQty:1}); }
             renderCart();
         }
@@ -207,8 +200,7 @@
             const i = currentCart.find(x=>x.id==id);
             if(i) {
                 i.cQty += amt;
-                const p = db_p.find(x=>x.id==id);
-                if(i.cQty > p.qty) i.cQty = p.qty;
+                if(i.cQty > db_p.find(x=>x.id==id).qty) i.cQty = db_p.find(x=>x.id==id).qty;
                 if(i.cQty <= 0) currentCart = currentCart.filter(x=>x.id!==id);
                 renderCart();
             }
@@ -231,10 +223,9 @@
             document.getElementById('total-amount').innerText = t.toLocaleString() + " Ks";
         }
 
-        // Inventory
         function saveProduct() {
             const n=document.getElementById('p-name').value, b=parseFloat(document.getElementById('p-buy').value), s=parseFloat(document.getElementById('p-sell').value), q=parseInt(document.getElementById('p-qty').value);
-            if(!n || isNaN(s)) return alert("အမည်နှင့် ရောင်းဈေးဖြည့်ပါ");
+            if(!n || isNaN(s)) return alert("အမည်နှင့် ရောင်းဈေးထည့်ပါ");
             db_p.push({id:Date.now(), name:n, buy:b||0, sell:s, qty:q||0, img:uploadedImg});
             save(); syncAll(); document.getElementById('p-name').value=""; uploadedImg=""; document.getElementById('img-v').style.display='none';
         }
@@ -243,23 +234,18 @@
         
         function calculateRestock() {
             const nQ=parseInt(document.getElementById('rs-qty').value), nB=parseFloat(document.getElementById('rs-buy').value);
-            if(isNaN(nQ) || isNaN(nB)) return alert("အချက်အလက်အမှန်ထည့်ပါ");
+            if(isNaN(nQ) || isNaN(nB)) return alert("အချက်အလက်မှန်အောင်ဖြည့်ပါ");
             const p = db_p.find(x=>x.id==selectedProdId);
             p.buy = Math.round(((p.qty * p.buy) + (nQ * nB)) / (p.qty + nQ));
             p.qty += nQ;
             save(); syncAll(); closeRestock();
         }
 
-        // Sale Process
         function openBillPreview(print) {
             if(!currentCart.length) return alert("စာရင်းမရှိပါ");
             const shop = document.getElementById('customer-shop').value || "အထွေထွေ";
             let rows = currentCart.map(i=>`<div style="display:flex; justify-content:space-between"><span>${i.name} x ${i.cQty}</span><span>${(i.sell*i.cQty).toLocaleString()}</span></div>`).join('');
-            document.getElementById('receipt-visible-area').innerHTML = `
-                <center><b>ထွန်းတောက်ကြယ်</b></center><hr>
-                <small>နေ့စွဲ: ${new Date().toLocaleString()}<br>ဝယ်သူ: ${shop}</small><hr>
-                ${rows}<hr>
-                <div style="display:flex; justify-content:space-between"><b>Total:</b><b>${document.getElementById('total-amount').innerText}</b></div>`;
+            document.getElementById('receipt-visible-area').innerHTML = `<center><b>ထွန်းတောက်ကြယ်</b></center><hr><small>နေ့စွဲ: ${new Date().toLocaleString()}<br>ဝယ်သူ: ${shop}</small><hr>${rows}<hr><div style="display:flex; justify-content:space-between"><b>Total:</b><b>${document.getElementById('total-amount').innerText}</b></div>`;
             document.getElementById('modal-actions').innerHTML = `<button class="btn-green" onclick="finalizeSale(${print})">Confirm Sale</button>`;
             document.getElementById('receipt-modal').style.display='block';
         }
@@ -277,7 +263,6 @@
             renderCart(); syncAll();
         }
 
-        // Reports
         function getReport(type) {
             const d=document.getElementById('date-pick').value, m=document.getElementById('month-pick').value, y=document.getElementById('year-pick').value;
             let f = db_s.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
@@ -291,7 +276,6 @@
             document.getElementById('item-report-rows').innerHTML = Object.keys(summary).map(k=>`<tr><td style="text-align:left">${k}</td><td>${summary[k].q}</td><td>${summary[k].s.toLocaleString()}</td></tr>`).join('');
         }
 
-        // Utils
         function filterPOS() { const q=document.getElementById('search-box').value.toLowerCase(); renderPOS(db_p.filter(p=>p.name.toLowerCase().includes(q))); }
         function renderStock() { document.getElementById('stock-count').innerText=db_p.length; document.getElementById('stock-rows').innerHTML=db_p.map(p=>`<tr><td>${p.name}</td><td>${p.sell.toLocaleString()}</td><td><b>${p.qty}</b></td></tr>`).join(''); }
         function renderInv() { document.getElementById('inventory-rows').innerHTML=db_p.map(p=>`<tr><td><img src="${p.img}" width="30"></td><td style="text-align:left">${p.name}</td><td>${p.buy}</td><td>${p.sell}</td><td>${p.qty}</td><td><button onclick="openRestock(${p.id})">+</button> <button onclick="delP(${p.id})" style="color:red;border:none;background:none"><i class="fas fa-trash"></i></button></td></tr>`).join(''); }
@@ -299,7 +283,7 @@
         function delSale(id) { if(confirm("ဖျက်မှာလား?")) { db_s=db_s.filter(x=>x.id!=id); save(); getReport('day'); } }
         function previewImg(e) { const r=new FileReader(); r.onload=()=>{uploadedImg=r.result; document.getElementById('img-v').src=r.result; document.getElementById('img-v').style.display='block';}; r.readAsDataURL(e.target.files[0]); }
         function checkAuth(t) { if(sessionStorage.getItem('ttk_auth')==='true') switchTab(t); else { window.pendingTab = t; document.getElementById('login-modal').style.display='block'; } }
-        function handleLogin() { if(document.getElementById('admin-pass').value==='111111'){ sessionStorage.setItem('ttk_auth','true'); document.getElementById('login-modal').style.display='none'; switchTab(window.pendingTab); } else alert("Password မှားယွင်းနေပါသည်"); }
+        function handleLogin() { if(document.getElementById('admin-pass').value==='111111'){ sessionStorage.setItem('ttk_auth','true'); document.getElementById('login-modal').style.display='none'; switchTab(window.pendingTab); } else alert("မှားယွင်းနေပါသည်"); }
         function userLogout() { sessionStorage.removeItem('ttk_auth'); switchTab('sales-tab'); }
         function closeRestock() { document.getElementById('restock-modal').style.display='none'; }
         function closeModal() { document.getElementById('login-modal').style.display='none'; }
