@@ -125,7 +125,7 @@
             <h4 id="report-title" style="margin-bottom:10px;">ရောင်းရသောပစ္စည်းစာရင်း</h4>
             <div class="table-wrapper">
                 <table class="table">
-                    <thead><tr><th>ပစ္စည်းအမည်</th><th>ခုရေ</th><th>ရငွေ</th></tr></thead>
+                    <thead><tr><th>ရက်စွဲ</th><th>ပစ္စည်းအမည်</th><th>ခုရေ</th><th>ရငွေ</th><th>Action</th></tr></thead>
                     <tbody id="sold-items-list"></tbody>
                 </table>
             </div>
@@ -162,7 +162,6 @@
 
         let products = [], sales = [], cart = [], tempImg = "", targetTab = "", curEditId = null;
 
-        // Local Storage ဖတ်မည်
         try {
             products = JSON.parse(localStorage.getItem('TTK_P')) || [];
             sales = JSON.parse(localStorage.getItem('TTK_S')) || [];
@@ -170,7 +169,6 @@
 
         setTimeout(() => window.refreshUI(), 100);
 
-        // --- Data ဆွဲယူခြင်း (Realtime Database မှ) ---
         onValue(ref(db, 'pos_data/database'), (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -192,14 +190,11 @@
             }
         });
 
-        // --- Cloud သို့ တင်ခြင်း ---
         window.syncToCloud = async () => {
             try {
                 localStorage.setItem('TTK_P', JSON.stringify(products));
                 localStorage.setItem('TTK_S', JSON.stringify(sales));
-            } catch(e) {
-                alert("ဖုန်း Memory ပြည့်နေပါသည်။ ပုံမပါဘဲ စမ်းထည့်ကြည့်ပါ။");
-            }
+            } catch(e) {}
             
             document.getElementById('status-tag').className = 'sync-tag status-syncing';
             document.getElementById('status-tag').innerText = 'Saving...';
@@ -209,14 +204,11 @@
                 document.getElementById('status-tag').className = 'sync-tag status-online';
                 document.getElementById('status-tag').innerText = 'Cloud Synced';
             } catch (e) { 
-                console.error(e);
-                alert("Cloud တင်ရန် ပိတ်ဆို့ခံထားရပါသည်။ Firebase Rules ကို သေချာပြင်ထားခြင်း ရှိ/မရှိ စစ်ဆေးပါ။");
                 document.getElementById('status-tag').className = 'sync-tag status-offline';
                 document.getElementById('status-tag').innerText = 'Error Saving';
             }
         };
 
-        // --- Image Compression (ပို၍ သေးငယ်အောင် ပြုလုပ်ထားသည်) ---
         window.previewImg = (e) => {
             const file = e.target.files[0];
             if(!file) return;
@@ -225,20 +217,19 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 300; // ပိုသေးအောင် ပြောင်းထားသည်
+                    const MAX_WIDTH = 300;
                     const scaleSize = MAX_WIDTH / img.width;
                     canvas.width = MAX_WIDTH;
                     canvas.height = img.height * scaleSize;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    tempImg = canvas.toDataURL('image/jpeg', 0.5); // Quality လျှော့ချထားသည်
+                    tempImg = canvas.toDataURL('image/jpeg', 0.5);
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         };
 
-        // --- UI Functions ---
         window.switchTab = (id, btn) => {
             document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -327,7 +318,7 @@
             cart.forEach(i => {
                 const p = products.find(x => x.id == i.id);
                 p.qty -= i.cQty; rev += i.sell * i.cQty; prof += (i.sell - p.buy) * i.cQty;
-                items.push({ n: i.name, q: i.cQty, s: i.sell * i.cQty });
+                items.push({ id: i.id, n: i.name, q: i.cQty, s: i.sell * i.cQty });
             });
             sales.push({ id: Date.now(), date, rev, prof, items });
             cart = []; window.renderCart(); window.syncToCloud();
@@ -374,14 +365,61 @@
             }
         };
 
+        // --- Report နှင့် Sale Deletion ပိုင်း ---
         window.runReport = (type) => {
             const d = document.getElementById('rep-day').value, m = document.getElementById('rep-month').value, y = document.getElementById('rep-year').value;
             let filt = sales.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
-            let r=0, p=0, sold={};
-            filt.forEach(s => { r+=s.rev; p+=s.prof; s.items.forEach(it => { if(!sold[it.n]) sold[it.n]={q:0,s:0}; sold[it.n].q+=it.q; sold[it.n].s+=it.s; }); });
-            document.getElementById('sum-rev').innerText = r.toLocaleString() + " Ks";
-            document.getElementById('sum-prof').innerText = Math.round(p).toLocaleString() + " Ks";
-            document.getElementById('sold-items-list').innerHTML = Object.keys(sold).map(n => `<tr><td>${n}</td><td>${sold[n].q}</td><td>${sold[n].s.toLocaleString()}</td></tr>`).join('');
+            let totalRev=0, totalProf=0;
+            let listHtml = "";
+
+            filt.forEach(s => { 
+                totalRev += s.rev; 
+                totalProf += s.prof; 
+                s.items.forEach(it => {
+                    listHtml += `
+                        <tr>
+                            <td>${s.date}</td>
+                            <td>${it.n}</td>
+                            <td>${it.q}</td>
+                            <td>${it.s.toLocaleString()}</td>
+                            <td>
+                                <button onclick="deleteSaleRecord(${s.id})" style="color:var(--red); border:none; background:none; cursor:pointer; font-size:1.1rem;">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            });
+
+            document.getElementById('sum-rev').innerText = totalRev.toLocaleString() + " Ks";
+            document.getElementById('sum-prof').innerText = Math.round(totalProf).toLocaleString() + " Ks";
+            document.getElementById('sold-items-list').innerHTML = listHtml;
+        };
+
+        window.deleteSaleRecord = (saleId) => {
+            if (confirm("ဤအရောင်းစာရင်းကို ဖျက်ရန် သေချာပါသလား?")) {
+                const sIdx = sales.findIndex(s => s.id === saleId);
+                if (sIdx === -1) return;
+
+                const saleData = sales[sIdx];
+                const shouldReturnStock = confirm("ရောင်းလိုက်သော ပစ္စည်းများကို Stock ထဲသို့ ပြန်ပေါင်းထည့်မလား?");
+
+                if (shouldReturnStock) {
+                    saleData.items.forEach(item => {
+                        const prod = products.find(p => p.id === item.id || p.name === item.n);
+                        if (prod) prod.qty += item.q;
+                    });
+                }
+
+                sales.splice(sIdx, 1);
+                window.syncToCloud();
+                
+                // Report ပြန်ပြင်ရန်
+                const d = document.getElementById('rep-day').value;
+                if(d) window.runReport('day');
+                window.refreshUI();
+                alert("စာရင်းဖျက်ပြီးပါပြီ။");
+            }
         };
 
         window.onload = () => {
