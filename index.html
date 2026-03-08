@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ထွန်းတောက်ကြယ် POS - VPN Free v2.0</title>
+    <title>ထွန်းတောက်ကြယ် POS - Multi-Device</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --midnight: #020617; --primary: #1e293b; --green: #10b981; --red: #ef4444; --gold: #fbbf24; --bg: #f3f4f6; }
@@ -66,13 +66,13 @@
         <div id="status-tag" class="sync-tag status-syncing">VPN Free Mode</div>
     </header>
 
-    <div class="dev-watermark">Develop by Min Khant</div>
+    <div class="dev-watermark">Developed by Min Khant</div>
     <div id="print-area"></div>
 
     <main id="tab-sales" class="container active">
         <div class="card">
             <div class="grid">
-                <input type="text" id="staff-name" class="input-style" placeholder="အရောင်းသမား">
+                <input type="text" id="staff-name" class="input-style" placeholder="အရောင်းသမား" readonly onclick="changeStaff()">
                 <input type="date" id="sale-date" class="input-style">
             </div>
             <input type="text" id="cust-name" class="input-style" placeholder="ဝယ်သူအမည်" style="margin-bottom:0;">
@@ -167,31 +167,49 @@
         <button class="nav-item" onclick="showLogin('tab-rep', this)"><i class="fas fa-chart-pie"></i>စာရင်းချုပ်</button>
     </nav>
 
+    <div id="staff-overlay" class="overlay" style="display:flex;"><div class="modal-card" style="text-align:center;"><h3><i class="fas fa-user-circle"></i> ဝန်ထမ်းအမည်</h3><p style="font-size:12px; color:gray; margin-bottom:10px;">စာရင်းသွင်းရန် နာမည်ဖြည့်ပါ</p><input type="text" id="staff-input" class="input-style" style="text-align:center;" placeholder="ဥပမာ- ကိုမင်းခန့်"><button class="btn btn-dark" onclick="setStaff()">အိုကေ</button></div></div>
+    
     <div id="login-overlay" class="overlay"><div class="modal-card" style="max-width:300px; text-align:center;"><h3><i class="fas fa-user-lock"></i> Admin Only</h3><input type="password" id="pass-input" class="input-style" style="text-align:center; margin-top:15px;" placeholder="******"><button class="btn btn-dark" onclick="verifyPass()">Unlock</button><button class="btn" style="background:#ddd; margin-top:10px;" onclick="closeOverlay('login-overlay')">Cancel</button></div></div>
+    
     <div id="add-overlay" class="overlay"><div class="modal-card"><h3>ပစ္စည်းသစ်ထည့်သွင်းခြင်း</h3><input type="text" id="p-name" class="input-style" placeholder="အမည်"><div class="grid"><input type="number" id="p-buy" class="input-style" placeholder="ဝယ်ဈေး"><input type="number" id="p-sell" class="input-style" placeholder="ရောင်းဈေး"></div><input type="number" id="p-qty" class="input-style" placeholder="အရေအတွက်"><input type="file" accept="image/*" onchange="previewImg(event)" class="input-style"><div class="grid"><button class="btn btn-green" onclick="addProduct()">Save</button><button class="btn" style="background:#ddd" onclick="closeOverlay('add-overlay')">Close</button></div></div></div>
+    
     <div id="edit-overlay" class="overlay"><div class="modal-card"><h3 id="edit-title"></h3><br><input type="number" id="edit-sell" class="input-style" placeholder="ရောင်းဈေးသစ်"><div class="grid"><input type="number" id="edit-add-qty" class="input-style" placeholder="ခုရေတိုးရန်"><input type="number" id="edit-buy" class="input-style" placeholder="ဝယ်ဈေး"></div><div class="grid" style="margin-top:20px;"><button class="btn btn-green" onclick="saveEdit()">Update</button><button class="btn" style="background:#ddd" onclick="closeOverlay('edit-overlay')">Cancel</button></div><button class="btn btn-red" onclick="deleteProduct()" style="margin-top:10px; opacity:0.7;">ဖျက်မည်</button></div></div>
 
     <script>
-        // VPN ကျော်ရန် အသုံးပြုမည့် Proxy Link
         const PROXY_URL = "https://pos-proxy.kopaing104077.workers.dev/pos_data/database.json";
-        
         let products = [], sales = [], expenses = [], cart = [], tempImg = "", targetTab = "", curEditId = null;
 
-        // Load data from LocalStorage first for instant speed
         function init() {
             products = JSON.parse(localStorage.getItem('TTK_P')) || [];
             sales = JSON.parse(localStorage.getItem('TTK_S')) || [];
             expenses = JSON.parse(localStorage.getItem('TTK_E')) || [];
+            
+            const savedStaff = localStorage.getItem('TTK_STAFF');
+            if(savedStaff) {
+                document.getElementById('staff-overlay').style.display = 'none';
+                document.getElementById('staff-name').value = savedStaff;
+            }
+
             refreshUI();
-            pullFromCloud(); // Background sync
+            pullFromCloud();
         }
 
-        // VPN မလိုဘဲ Cloud မှ Data ဆွဲယူခြင်း
+        window.setStaff = () => {
+            const name = document.getElementById('staff-input').value;
+            if(!name) return alert("နာမည်ထည့်ပါ");
+            localStorage.setItem('TTK_STAFF', name);
+            document.getElementById('staff-name').value = name;
+            document.getElementById('staff-overlay').style.display = 'none';
+        };
+
+        window.changeStaff = () => {
+            document.getElementById('staff-overlay').style.display = 'flex';
+        };
+
         async function pullFromCloud() {
             const tag = document.getElementById('status-tag');
             tag.className = 'sync-tag status-syncing';
             tag.innerText = 'Syncing...';
-
             try {
                 const res = await fetch(PROXY_URL);
                 const data = await res.json();
@@ -210,12 +228,10 @@
             }
         }
 
-        // VPN မလိုဘဲ Cloud ပေါ်သို့ Data တင်ခြင်း
         async function syncToCloud() {
             saveLocal();
             const tag = document.getElementById('status-tag');
             tag.innerText = 'Saving...';
-
             try {
                 await fetch(PROXY_URL, {
                     method: 'PUT',
@@ -234,8 +250,6 @@
             localStorage.setItem('TTK_S', JSON.stringify(sales));
             localStorage.setItem('TTK_E', JSON.stringify(expenses));
         }
-
-        // --- UI & POS Logic ---
 
         window.previewImg = (e) => {
             const file = e.target.files[0];
@@ -281,15 +295,12 @@
         window.refreshUI = () => {
             const q = document.getElementById('search-box')?.value.toLowerCase() || "";
             const filt = products.filter(p => p.name.toLowerCase().includes(q));
-            
             document.getElementById('pos-grid').innerHTML = filt.map(p => `
                 <div class="p-card" onclick="addToCart(${p.id})">
                     <img src="${p.img || 'https://via.placeholder.com/150'}">
                     <div style="padding:8px;"><div style="font-size:12px; height:32px;">${p.name}</div><div style="color:var(--green); font-weight:bold;">${p.sell.toLocaleString()} Ks</div></div>
                 </div>`).join('');
-
             document.getElementById('stock-list').innerHTML = products.map(p => `<tr><td>${p.name}</td><td>${p.sell.toLocaleString()}</td><td style="font-weight:bold; color:${p.qty<5?'red':'black'}">${p.qty}</td></tr>`).join('');
-            
             document.getElementById('inv-list').innerHTML = products.map(p => `
                 <tr>
                     <td><img src="${p.img || 'https://via.placeholder.com/150'}" class="row-img"></td>
@@ -338,7 +349,7 @@
         };
 
         window.printVoucher = (s) => {
-            let h = `<div style="text-align:center; padding:20px; font-family:sans-serif;"><h2>ထွန်းတောက်ကြယ်</h2><p>ရက်စွဲ: ${s.date}</p><hr><table style="width:100%; text-align:left;">${s.items.map(i => `<tr><td>${i.n} x ${i.q}</td><td style="text-align:right;">${i.s.toLocaleString()}</td></tr>`).join('')}</table><hr><h3>Total: ${s.rev.toLocaleString()} Ks</h3><p>ကျေးဇူးတင်ပါသည်</p></div>`;
+            let h = `<div style="text-align:center; padding:20px; font-family:sans-serif;"><h2>ထွန်းတောက်ကြယ်</h2><p>ရက်စွဲ: ${s.date}</p><p>အရောင်း: ${s.staff}</p><hr><table style="width:100%; text-align:left;">${s.items.map(i => `<tr><td>${i.n} x ${i.q}</td><td style="text-align:right;">${i.s.toLocaleString()}</td></tr>`).join('')}</table><hr><h3>Total: ${s.rev.toLocaleString()} Ks</h3><p>ကျေးဇူးတင်ပါသည်</p></div>`;
             document.getElementById('print-area').innerHTML = h; window.print();
         };
 
@@ -379,7 +390,7 @@
             const d = document.getElementById('rep-day').value, m = document.getElementById('rep-month').value, y = document.getElementById('rep-year').value;
             let filtS = sales.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
             let tR=0, tP=0, h="";
-            filtS.forEach(s => { tR+=s.rev; tP+=s.prof; s.items.forEach(it => { h+=`<tr><td>${s.date}</td><td>${it.n}</td><td>${it.q}</td><td>${it.s.toLocaleString()}</td><td>-</td></tr>`; }); });
+            filtS.forEach(s => { tR+=s.rev; tP+=s.prof; s.items.forEach(it => { h+=`<tr><td>${s.date}</td><td>${it.n}</td><td>${it.q}</td><td>${it.s.toLocaleString()}</td><td>${s.staff}</td></tr>`; }); });
             let filtE = expenses.filter(e => (type==='day' && e.date===d) || (type==='month' && e.date.startsWith(m)) || (type==='year' && e.date.startsWith(y)));
             let tE = filtE.reduce((a, b) => a + b.amt, 0);
             document.getElementById('sum-rev').innerText = tR.toLocaleString(); document.getElementById('sum-prof').innerText = Math.round(tP).toLocaleString();
@@ -388,9 +399,9 @@
         };
 
         window.exportToCSV = () => {
-            let c = "data:text/csv;charset=utf-8,\uFEFFရက်စွဲ,အမျိုးအစား,အကြောင်းအရာ,အရေအတွက်,ငွေပမာဏ\n";
-            sales.forEach(s => s.items.forEach(i => c += `${s.date},Sale,${i.n},${i.q},${i.s}\n`));
-            expenses.forEach(e => c += `${e.date},Expense,${e.desc},-,${e.amt}\n`);
+            let c = "data:text/csv;charset=utf-8,\uFEFFရက်စွဲ,အမျိုးအစား,အကြောင်းအရာ,အရေအတွက်,ငွေပမာဏ,အရောင်းသမား\n";
+            sales.forEach(s => s.items.forEach(i => c += `${s.date},Sale,${i.n},${i.q},${i.s},${s.staff}\n`));
+            expenses.forEach(e => c += `${e.date},Expense,${e.desc},-,${e.amt},-\n`);
             const link = document.createElement("a"); link.href = encodeURI(c); link.download = "Report.csv"; link.click();
         };
 
