@@ -48,6 +48,18 @@
         .btn-green { background: var(--green); color: white; }
         .btn-dark { background: var(--midnight); color: white; }
         .btn-red { background: var(--red); color: white; }
+
+        /* Developer Watermark */
+        .dev-watermark { position: fixed; bottom: 80px; right: 12px; font-size: 10px; color: #94a3b8; font-weight: bold; z-index: 900; pointer-events: none; opacity: 0.8; }
+
+        /* Print Settings for Receipt */
+        #print-area { display: none; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { display: block; position: absolute; left: 0; top: 0; width: 100%; padding: 15px; }
+            .dev-watermark { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -57,10 +69,14 @@
         <div id="status-tag" class="sync-tag status-syncing">Connecting...</div>
     </header>
 
+    <div class="dev-watermark">Develop by Min Khant</div>
+
+    <div id="print-area"></div>
+
     <main id="tab-sales" class="container active">
         <div class="card">
             <div class="grid">
-                <input type="text" id="staff-name" class="input-style" placeholder="အရောင်းသမား">
+                <input type="text" id="staff-name" class="input-style" placeholder="အရောင်းသမား (Cashier)">
                 <input type="date" id="sale-date" class="input-style">
             </div>
             <input type="text" id="cust-name" class="input-style" placeholder="ဝယ်သူအမည်" style="margin-bottom:0;">
@@ -83,7 +99,7 @@
 
     <main id="tab-stock" class="container">
         <div class="card">
-            <h3 style="margin-bottom:15px;">ပစ္စည်းလက်ကျန်</h3>
+            <h3 style="margin-bottom:15px;">ပစ္စည်းလက်ကျန် (Stock)</h3>
             <div class="table-wrapper">
                 <table class="table">
                     <thead><tr><th>အမည်</th><th>ရောင်းဈေး</th><th>လက်ကျန်</th></tr></thead>
@@ -101,7 +117,7 @@
             </div>
         </div>
         <div class="card">
-            <h4 style="margin-bottom:10px;">Warehouse Inventory</h4>
+            <h4 style="margin-bottom:10px;">Warehouse Inventory (Admin Only)</h4>
             <div class="table-wrapper">
                 <table class="table">
                     <thead><tr><th>ပုံ</th><th>အမည်</th><th>ဝယ်ဈေး</th><th>ရောင်းဈေး</th><th>Stock</th><th>Action</th></tr></thead>
@@ -116,11 +132,38 @@
             <div class="grid"><input type="date" id="rep-day" class="input-style"><button class="btn btn-dark" onclick="runReport('day')">နေ့စဉ်</button></div>
             <div class="grid" style="margin-top:5px;"><input type="month" id="rep-month" class="input-style"><button class="btn btn-dark" onclick="runReport('month')">လစဉ်</button></div>
             <div class="grid" style="margin-top:5px;"><input type="number" id="rep-year" class="input-style" placeholder="နှစ် (2025)"><button class="btn btn-dark" onclick="runReport('year')">နှစ်စဉ်</button></div>
+            
+            <button class="btn btn-green" style="margin-top:10px; width:100%;" onclick="exportToCSV()"><i class="fas fa-file-excel"></i> Excel ဖိုင်ဒေါင်းရန်</button>
+        </div>
+
+        <div class="grid" style="margin-bottom:10px;">
+            <div style="background:#fff; padding:15px; border-radius:12px; text-align:center; border:1px solid #ddd;"><small>ရောင်းရငွေ</small><div id="sum-rev" style="font-weight:bold;">0</div></div>
+            <div style="background:#fff; padding:15px; border-radius:12px; text-align:center; border:1px solid #ddd;"><small>အကြမ်းအမြတ်</small><div id="sum-prof" style="font-weight:bold; color:var(--green);">0</div></div>
         </div>
         <div class="grid" style="margin-bottom:15px;">
-            <div style="background:#fff; padding:15px; border-radius:12px; text-align:center; border:1px solid #ddd;"><small>ရောင်းရငွေ</small><div id="sum-rev" style="font-weight:bold;">0</div></div>
-            <div style="background:#fff; padding:15px; border-radius:12px; text-align:center; border:1px solid #ddd;"><small>အမြတ်</small><div id="sum-prof" style="font-weight:bold; color:var(--green);">0</div></div>
+            <div style="background:#fff; padding:15px; border-radius:12px; text-align:center; border:1px solid #ddd;"><small>အသုံးစရိတ်</small><div id="sum-exp" style="font-weight:bold; color:var(--red);">0</div></div>
+            <div style="background:#fff; padding:15px; border-radius:12px; text-align:center; border:1px solid var(--green); background:#f0fdf4;"><small>အသားတင်အမြတ်</small><div id="sum-net" style="font-weight:bold; color:var(--green); font-size:1.1rem;">0</div></div>
         </div>
+
+        <div class="card" style="border-top: 3px solid var(--red);">
+            <h4 style="margin-bottom:10px;"><i class="fas fa-money-bill-wave"></i> အသုံးစရိတ်ထည့်ရန်</h4>
+            <div class="grid">
+                <input type="text" id="exp-desc" class="input-style" placeholder="အကြောင်းအရာ">
+                <input type="number" id="exp-amt" class="input-style" placeholder="ငွေပမာဏ">
+            </div>
+            <button class="btn btn-red" onclick="addExpense()"><i class="fas fa-minus-circle"></i> အသုံးစရိတ်မှတ်မည်</button>
+        </div>
+
+        <div class="card">
+            <h4 style="margin-bottom:10px;">အသုံးစရိတ် စာရင်း</h4>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead><tr><th>ရက်စွဲ</th><th>အကြောင်းအရာ</th><th>ငွေပမာဏ</th><th>Action</th></tr></thead>
+                    <tbody id="exp-items-list"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="card">
             <h4 id="report-title" style="margin-bottom:10px;">ရောင်းရသောပစ္စည်းစာရင်း</h4>
             <div class="table-wrapper">
@@ -139,7 +182,7 @@
         <button class="nav-item" onclick="showLogin('tab-rep', this)"><i class="fas fa-chart-pie"></i>စာရင်းချုပ်</button>
     </nav>
 
-    <div id="login-overlay" class="overlay"><div class="modal-card" style="max-width:300px; text-align:center;"><h3>လုံခြုံရေးကုဒ်</h3><input type="password" id="pass-input" class="input-style" style="text-align:center; margin-top:15px;" placeholder="******"><button class="btn btn-dark" onclick="verifyPass()">Unlock</button></div></div>
+    <div id="login-overlay" class="overlay"><div class="modal-card" style="max-width:300px; text-align:center;"><h3><i class="fas fa-user-lock"></i> Admin Only</h3><p style="font-size:12px; color:gray; margin-top:5px;">ဆိုင်ရှင်သာဝင်ရောက်ရန် လုံခြုံရေးကုဒ်ရိုက်ပါ</p><input type="password" id="pass-input" class="input-style" style="text-align:center; margin-top:15px;" placeholder="******"><button class="btn btn-dark" onclick="verifyPass()">Unlock</button><button class="btn" style="background:#ddd; margin-top:10px;" onclick="closeOverlay('login-overlay')">Cancel</button></div></div>
     <div id="add-overlay" class="overlay"><div class="modal-card"><h3>ပစ္စည်းသစ်ထည့်သွင်းခြင်း</h3><input type="text" id="p-name" class="input-style" placeholder="အမည်"><div class="grid"><input type="number" id="p-buy" class="input-style" placeholder="ဝယ်ဈေး"><input type="number" id="p-sell" class="input-style" placeholder="ရောင်းဈေး"></div><input type="number" id="p-qty" class="input-style" placeholder="အရေအတွက်"><input type="file" accept="image/*" onchange="previewImg(event)" class="input-style"><div class="grid"><button class="btn btn-green" onclick="addProduct()">Save</button><button class="btn" style="background:#ddd" onclick="closeOverlay('add-overlay')">Close</button></div></div></div>
     <div id="edit-overlay" class="overlay"><div class="modal-card"><h3 id="edit-title"></h3><br><input type="number" id="edit-sell" class="input-style" placeholder="ရောင်းဈေးသစ်"><hr style="margin:15px 0; border:0; border-top:1px dashed #ccc;"><div class="grid"><input type="number" id="edit-add-qty" class="input-style" placeholder="ခုရေတိုးရန်"><input type="number" id="edit-buy" class="input-style" placeholder="ဝယ်ဈေး"></div><div class="grid" style="margin-top:20px;"><button class="btn btn-green" onclick="saveEdit()">Update</button><button class="btn" style="background:#ddd" onclick="closeOverlay('edit-overlay')">Cancel</button></div><button class="btn btn-red" onclick="deleteProduct()" style="margin-top:10px; opacity:0.7;">ဖျက်မည်</button></div></div>
 
@@ -160,11 +203,13 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        let products = [], sales = [], cart = [], tempImg = "", targetTab = "", curEditId = null;
+        // Added 'expenses' array to global state
+        let products = [], sales = [], expenses = [], cart = [], tempImg = "", targetTab = "", curEditId = null;
 
         try {
             products = JSON.parse(localStorage.getItem('TTK_P')) || [];
             sales = JSON.parse(localStorage.getItem('TTK_S')) || [];
+            expenses = JSON.parse(localStorage.getItem('TTK_E')) || [];
         } catch(e) {}
 
         setTimeout(() => window.refreshUI(), 100);
@@ -172,12 +217,14 @@
         onValue(ref(db, 'pos_data/database'), (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                if ((data.products && data.products.length > 0) || (data.sales && data.sales.length > 0)) {
+                if ((data.products && data.products.length > 0) || (data.sales && data.sales.length > 0) || (data.expenses && data.expenses.length > 0)) {
                     products = data.products || [];
                     sales = data.sales || [];
+                    expenses = data.expenses || [];
                     try {
                         localStorage.setItem('TTK_P', JSON.stringify(products));
                         localStorage.setItem('TTK_S', JSON.stringify(sales));
+                        localStorage.setItem('TTK_E', JSON.stringify(expenses));
                     } catch(e) {}
                     window.refreshUI();
                 }
@@ -194,13 +241,15 @@
             try {
                 localStorage.setItem('TTK_P', JSON.stringify(products));
                 localStorage.setItem('TTK_S', JSON.stringify(sales));
+                localStorage.setItem('TTK_E', JSON.stringify(expenses));
             } catch(e) {}
             
             document.getElementById('status-tag').className = 'sync-tag status-syncing';
             document.getElementById('status-tag').innerText = 'Saving...';
             
             try {
-                await set(ref(db, 'pos_data/database'), { products, sales });
+                // Include expenses in Cloud sync
+                await set(ref(db, 'pos_data/database'), { products, sales, expenses });
                 document.getElementById('status-tag').className = 'sync-tag status-online';
                 document.getElementById('status-tag').innerText = 'Cloud Synced';
             } catch (e) { 
@@ -240,8 +289,12 @@
 
         window.showLogin = (id, btn) => {
             targetTab = id;
-            if (localStorage.getItem('TTK_LOGGED') === 'true') window.switchTab(id, btn);
-            else document.getElementById('login-overlay').style.display = 'flex';
+            if (localStorage.getItem('TTK_LOGGED') === 'true') {
+                window.switchTab(id, btn);
+            } else {
+                document.getElementById('pass-input').value = ""; // clear input
+                document.getElementById('login-overlay').style.display = 'flex';
+            }
         };
 
         window.verifyPass = () => {
@@ -249,7 +302,16 @@
                 localStorage.setItem('TTK_LOGGED', 'true');
                 document.getElementById('login-overlay').style.display = 'none';
                 window.switchTab(targetTab, null);
-            } else alert("မှားနေသည်");
+                
+                // Highlight correct bottom nav
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                const navButtons = document.querySelectorAll('.nav-item');
+                if(targetTab === 'tab-inv') navButtons[2].classList.add('active');
+                if(targetTab === 'tab-rep') navButtons[3].classList.add('active');
+
+            } else {
+                alert("စကားဝှက် မှားယွင်းနေပါသည်။ (Admin သာဝင်ရောက်နိုင်ပါသည်)");
+            }
         };
 
         window.logout = () => { localStorage.removeItem('TTK_LOGGED'); location.reload(); };
@@ -311,18 +373,63 @@
             window.renderCart();
         };
 
-        window.processSale = (print) => {
+        // Modified for Print Feature
+        window.processSale = (printReceiptMode) => {
             if(!cart.length) return alert("ခြင်းတောင်းထဲမှာဘာမှမရှိပါ");
             const date = document.getElementById('sale-date').value || new Date().toISOString().split('T')[0];
+            const staff = document.getElementById('staff-name').value || "Cashier";
+            const cust = document.getElementById('cust-name').value || "Customer";
+
             let rev = 0, prof = 0, items = [];
             cart.forEach(i => {
                 const p = products.find(x => x.id == i.id);
                 p.qty -= i.cQty; rev += i.sell * i.cQty; prof += (i.sell - p.buy) * i.cQty;
-                items.push({ id: i.id, n: i.name, q: i.cQty, s: i.sell * i.cQty });
+                items.push({ id: i.id, n: i.name, q: i.cQty, s: i.sell * i.cQty, price: i.sell });
             });
-            sales.push({ id: Date.now(), date, rev, prof, items });
+            
+            const currentSale = { id: Date.now(), date, rev, prof, items, staff, cust };
+            sales.push(currentSale);
             cart = []; window.renderCart(); window.syncToCloud();
-            if(print) alert("သိမ်းဆည်းပြီးပါပြီ");
+
+            if (printReceiptMode) {
+                window.printVoucher(currentSale);
+            } else {
+                alert("သိမ်းဆည်းပြီးပါပြီ");
+            }
+        };
+
+        window.printVoucher = (sale) => {
+            let html = `
+                <div style="text-align:center; font-family:sans-serif; max-width: 350px; margin: 0 auto; color: #000;">
+                    <h2>ထွန်းတောက်ကြယ်</h2>
+                    <p style="margin: 5px 0; font-size:14px;">အရောင်းဘောင်ချာ</p>
+                    <div style="text-align:left; font-size:12px; margin-bottom:10px; border-bottom:1px dashed #000; padding-bottom:5px;">
+                        <div>ရက်စွဲ: ${sale.date}</div>
+                        <div>အရောင်းသမား: ${sale.staff}</div>
+                        <div>ဝယ်သူ: ${sale.cust}</div>
+                    </div>
+                    <table style="width:100%; text-align:left; font-size:12px; border-collapse:collapse;">
+                        <tr style="border-bottom:1px solid #000;">
+                            <th style="padding-bottom:5px;">အမည်</th>
+                            <th style="padding-bottom:5px;">ခုရေ</th>
+                            <th style="padding-bottom:5px;">ကျသင့်ငွေ</th>
+                        </tr>
+                        ${sale.items.map(i => `
+                            <tr>
+                                <td style="padding:5px 0;">${i.n}<br><small>${i.price.toLocaleString()} Ks</small></td>
+                                <td style="padding:5px 0;">${i.q}</td>
+                                <td style="padding:5px 0;">${i.s.toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                    <div style="border-top:1px dashed #000; margin-top:10px; padding-top:10px; text-align:right; font-size:14px; font-weight:bold;">
+                        စုစုပေါင်း: ${sale.rev.toLocaleString()} Ks
+                    </div>
+                    <p style="margin-top:20px; font-size:12px;">ဝယ်ယူအားပေးမှုကို ကျေးဇူးတင်ပါသည်!</p>
+                </div>
+            `;
+            document.getElementById('print-area').innerHTML = html;
+            window.print();
         };
 
         window.openAddModal = () => document.getElementById('add-overlay').style.display = 'flex';
@@ -365,14 +472,43 @@
             }
         };
 
+        // --- Expenses Area ---
+        window.addExpense = () => {
+            const desc = document.getElementById('exp-desc').value;
+            const amt = parseFloat(document.getElementById('exp-amt').value);
+            const date = document.getElementById('rep-day').value || new Date().toISOString().split('T')[0];
+            
+            if(!desc || isNaN(amt)) return alert("အသုံးစရိတ် အကြောင်းအရာနှင့် ငွေပမာဏ ပြည့်စုံစွာထည့်ပါ");
+            
+            expenses.push({ id: Date.now(), date, desc, amt });
+            document.getElementById('exp-desc').value = "";
+            document.getElementById('exp-amt').value = "";
+            window.syncToCloud();
+            
+            // Reload report
+            const type = document.getElementById('rep-day').value ? 'day' : (document.getElementById('rep-month').value ? 'month' : 'year');
+            window.runReport(type);
+        };
+
+        window.deleteExpense = (expId) => {
+            if(confirm("ဤအသုံးစရိတ်ကို ဖျက်ရန် သေချာပါသလား?")) {
+                expenses = expenses.filter(e => e.id !== expId);
+                window.syncToCloud();
+                const type = document.getElementById('rep-day').value ? 'day' : (document.getElementById('rep-month').value ? 'month' : 'year');
+                window.runReport(type);
+            }
+        };
+
         // --- Report နှင့် Sale Deletion ပိုင်း ---
         window.runReport = (type) => {
             const d = document.getElementById('rep-day').value, m = document.getElementById('rep-month').value, y = document.getElementById('rep-year').value;
-            let filt = sales.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
+            
+            // Calculate Sales
+            let filtS = sales.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
             let totalRev=0, totalProf=0;
             let listHtml = "";
 
-            filt.forEach(s => { 
+            filtS.forEach(s => { 
                 totalRev += s.rev; 
                 totalProf += s.prof; 
                 s.items.forEach(it => {
@@ -391,9 +527,35 @@
                 });
             });
 
+            // Calculate Expenses
+            let filtE = expenses.filter(e => (type==='day' && e.date===d) || (type==='month' && e.date.startsWith(m)) || (type==='year' && e.date.startsWith(y)));
+            let totalExp = 0;
+            let expHtml = "";
+            filtE.forEach(e => {
+                totalExp += e.amt;
+                expHtml += `
+                    <tr>
+                        <td>${e.date}</td>
+                        <td>${e.desc}</td>
+                        <td style="color:var(--red); font-weight:bold;">${e.amt.toLocaleString()}</td>
+                        <td>
+                            <button onclick="deleteExpense(${e.id})" style="color:var(--red); border:none; background:none; cursor:pointer; font-size:1.1rem;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+
+            // Net Profit = Gross Profit - Expenses
+            let netProf = totalProf - totalExp;
+
             document.getElementById('sum-rev').innerText = totalRev.toLocaleString() + " Ks";
             document.getElementById('sum-prof').innerText = Math.round(totalProf).toLocaleString() + " Ks";
+            document.getElementById('sum-exp').innerText = Math.round(totalExp).toLocaleString() + " Ks";
+            document.getElementById('sum-net').innerText = Math.round(netProf).toLocaleString() + " Ks";
+            
             document.getElementById('sold-items-list').innerHTML = listHtml;
+            document.getElementById('exp-items-list').innerHTML = expHtml;
         };
 
         window.deleteSaleRecord = (saleId) => {
@@ -415,11 +577,40 @@
                 window.syncToCloud();
                 
                 // Report ပြန်ပြင်ရန်
-                const d = document.getElementById('rep-day').value;
-                if(d) window.runReport('day');
+                const type = document.getElementById('rep-day').value ? 'day' : (document.getElementById('rep-month').value ? 'month' : 'year');
+                window.runReport(type);
                 window.refreshUI();
                 alert("စာရင်းဖျက်ပြီးပါပြီ။");
             }
+        };
+
+        // --- Export to CSV / Excel ---
+        window.exportToCSV = () => {
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for Unicode Support
+            csvContent += "ရက်စွဲ,အမျိုးအစား,အကြောင်းအရာ/ပစ္စည်းအမည်,အရေအတွက်,ငွေပမာဏ(Ks)\n";
+
+            const type = document.getElementById('rep-day').value ? 'day' : (document.getElementById('rep-month').value ? 'month' : 'year');
+            const d = document.getElementById('rep-day').value, m = document.getElementById('rep-month').value, y = document.getElementById('rep-year').value;
+            
+            let filtS = sales.filter(s => (type==='day' && s.date===d) || (type==='month' && s.date.startsWith(m)) || (type==='year' && s.date.startsWith(y)));
+            filtS.forEach(s => {
+                s.items.forEach(it => {
+                    csvContent += `${s.date},အရောင်း (Sale),${it.n},${it.q},${it.s}\n`;
+                });
+            });
+
+            let filtE = expenses.filter(e => (type==='day' && e.date===d) || (type==='month' && e.date.startsWith(m)) || (type==='year' && e.date.startsWith(y)));
+            filtE.forEach(e => {
+                csvContent += `${e.date},အသုံးစရိတ် (Expense),${e.desc},-,${e.amt}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "TTK_Report.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
 
         window.onload = () => {
